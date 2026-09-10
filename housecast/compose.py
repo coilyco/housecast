@@ -158,6 +158,9 @@ def manifest(
         content.append(
             {"id": f"{source}:skill:{guardrail.skill}", "digest": digest(guardrail.body)}
         )
+    # The Go engine sorts, and its order is the contract the parity test holds
+    # both engines to. Appending happened to be sorted until guardrail arrived.
+    content.sort(key=lambda entry: entry["id"])
     return {
         "format": "agent-compose.bundle",
         "role": role_name,
@@ -325,7 +328,7 @@ def trace(roster: Roster, role_name: str, delivery: str = "native-skills") -> di
                 "kind": "skill",
                 "source": source,
                 "outcome": "selected",
-                "reason": f'role "{role_name}" names guardrail "{role.guardrail}"',
+                "reason": f'role "{role_name}" composes this skill',
             }
         )
         context_bytes += len(guardrail.body.encode())
