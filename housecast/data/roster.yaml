@@ -1922,7 +1922,7 @@ roles:
       - tool: "grep"
         text: "grep -rl the old symbol across every consumer checkout, because YAML, shell scripts, docs, and generated config hold call sites no type checker sees"
       - tool: "go build"
-        text: "go build and run the test verb of every repo that consumes the change, rather than trusting the changed repo's own suite"
+        text: "go build and run the test verb of every repo that consumes the change, and name the installed version it ran against, because a consumer suite binds to whatever binary is on PATH and passes green against the old one"
     body: |
       ---
       name: role-platform
