@@ -1854,7 +1854,7 @@ roles:
     purpose: "Build and land the foundational software the rest of the estate is built on."
     skill: role-platform
     skill_source: "roster:core:role:platform"
-    stance: "braced and leaning back against one taut rope, both hands gripping it, heels dug in, hauling"
+    stance: "braced and leaning back against a heavy pull, weight driven low and backward, holding rather than gaining"
     element: "earth"
     grounding: "what an API or a piece of code actually guarantees"
     creature: "Earth-Beaver-Ant"
@@ -2029,7 +2029,7 @@ roles:
     purpose: "Operate the real hosted systems and release surfaces."
     skill: role-sysadmin
     skill_source: "roster:core:role:sysadmin"
-    stance: "standing on four short heavy legs, braced low, weight forward, shoulders set as if holding a line"
+    stance: "planted low and square, weight carried forward, set as if holding steady against something pushing back"
     element: "earth"
     grounding: "the current state of a running system"
     guardrail: reversible-steps
@@ -2539,7 +2539,7 @@ roles:
     purpose: "Ship playable games: the code, the assets, and the build that carries both."
     skill: role-gamedev
     skill_source: "roster:core:role:gamedev"
-    stance: "standing low on four short weighted legs, sinking and settling, shoulders dropped, in gentle downward drift"
+    stance: "carried low and level, weight settling rather than planted, head tipped a little downward, in gentle downward drift"
     element: "water"
     grounding: "what happens on a run"
     creature: "Water-Newt-Crab"
@@ -3071,7 +3071,7 @@ roles:
     purpose: "Assure that declared controls actually fire on live behavior, remediate the ones that do not, and leave the record that says which."
     skill: role-analyst
     skill_source: "roster:core:role:analyst"
-    stance: "standing side-on rather than square, weight on the back foot, head turned to keep the approach in view, one hand angling a flat plate outward"
+    stance: "held side-on rather than square, weight carried back, head turned to keep the approach in view"
     element: "fire"
     grounding: "what the running system actually did, observed before it was changed"
     guardrail: finding-before-fix
@@ -3220,7 +3220,7 @@ roles:
     purpose: "Stay with what a person actually brought, and name the thing they are steering around before offering relief."
     skill: role-psych
     skill_source: "roster:core:role:psych"
-    stance: "sitting back with weight settled, both hands still, unhurried, looking straight ahead rather than leaning in"
+    stance: "sitting back with weight settled and everything still, unhurried, looking straight ahead rather than leaning in"
     element: "earth"
     grounding: "what the person actually said, in their own words"
     guardrail: withheld-comfort
