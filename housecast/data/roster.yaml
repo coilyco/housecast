@@ -2647,6 +2647,9 @@ roles:
         legal_name: "Codex"
         harness: codex
         tier: frontier
+      - key: goose
+        legal_name: "Goose"
+        harness: goose
     adjacents:
       - role: director
         reason: "closing or reprioritizing a record because the evidence looks obvious instead of handing the gate over with a recommendation"
