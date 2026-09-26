@@ -33,6 +33,10 @@
       <button class="send" id="submit-send" type="submit">SEND</button>
     </form>
     <p class="note" id="submit-note" role="status" hidden></p>
+    <div id="yours" hidden>
+      <h2 class="yours__title">Your prompts, being answered</h2>
+      <ol class="yours" id="yours-list"></ol>
+    </div>
   </section>
   <section class="panel panel--live" id="leader" aria-labelledby="leader-title" hidden>
     <p class="eyebrow eyebrow--live">live // most divergent prompt</p>
@@ -91,8 +95,22 @@ function show(phase) {
   else ($(phase) ?? $("holding")).hidden = false;
 }
 
-function renderSubmissions() {
-  $("submit-eyebrow").textContent = `round ${room.round.n + 1} // open`;
+/** The prompts this browser sent, newest first, each with its four subjects' progress. */
+function renderYours(now) {
+  const yours = room.prompts.filter((p) => mine.has(p.id)).reverse().slice(0, 3);
+  $("yours").hidden = !yours.length;
+  V.setHtml($("yours-list"), yours
+    .map((p) => {
+      const d = room.divergence[p.id];
+      const score = d?.state === "done" ? `split ${d.score.toFixed(2)}` : d?.state === "failed" ? "couldn't be scored" : "";
+      return `<li class="yours__item"><p class="yours__text">${escapeHtml(p.text)}${score ? ` <span class="dim">(${score})</span>` : ""}</p><ul class="progress">${V.progress(room, p.id, now)}</ul></li>`;
+    })
+    .join(""));
+}
+
+function renderSubmissions(now) {
+  $("submit-eyebrow").textContent = `round ${(room.round?.n ?? 0) + 1} // open`;
+  renderYours(now);
   V.setHtml($("leader-list"), V.board(room, { mine }));
   const inFlight = room.prompts.filter((p) => room.divergence[p.id]?.state !== "done").length;
   $("leader-pending").textContent = inFlight ? `${inFlight} ${inFlight === 1 ? "prompt is" : "prompts are"} still being answered.` : "";
@@ -145,7 +163,7 @@ function render() {
   const now = Date.now();
   V.setHtml($("holding-cast"), V.cast(room));
   show(room.phase);
-  if (room.phase === "submissions") renderSubmissions();
+  if (room.phase === "submissions") renderSubmissions(now);
   else if (room.phase === "grading") renderGrading(now);
   else if (room.phase === "split") renderSplit();
   else if (room.phase === "closing") V.setHtml($("closing-list"), V.failures(room));

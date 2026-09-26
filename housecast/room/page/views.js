@@ -63,6 +63,20 @@ function answerCard(room, promptId, subject, now, extra = "") {
   </article>`;
 }
 
+/** One prompt's four subjects as compact rows, each with its own state and timer. */
+function progress(room, promptId, now) {
+  return room.subjects
+    .map((subject) => {
+      const answer = answerFor(room, promptId, subject.id);
+      const state = stateOf(answer, now);
+      const bar = answer.state === "running" || answer.state === "queued"
+        ? `<span class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></span>`
+        : "";
+      return `<li class="progress__row" data-state="${escapeHtml(answer.state)}" style="--c:${lookOf(room, subject).color}">${who(room, subject)}<span class="answer__state"${state.tone ? ` data-tone="${state.tone}"` : ""}>${escapeHtml(state.text)}</span>${bar}</li>`;
+    })
+    .join("");
+}
+
 /** The leaderboard. `withText` false keeps unpicked prompt text off a recorded screen. */
 function board(room, { withText = true, mine = new Set(), limit = Infinity } = {}) {
   const rows = leaderboard(room).slice(0, limit);
@@ -125,5 +139,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, board, lexicalNote, split, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, progress, board, lexicalNote, split, failures, setHtml, subjectById };
 })();
