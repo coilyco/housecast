@@ -140,3 +140,7 @@ grade-seal *ARGS:
 # Serve a built deck to a room, with anonymous voting. `just grade-present DECK`.
 grade-present *ARGS:
     @uv run --extra eval housecast grade present "$@"
+
+# Export the room pages as a static site (default dist/room-site) for S3 and CloudFront.
+room-site *ARGS:
+    @uv run --all-extras python scripts/room_site.py "$@"
