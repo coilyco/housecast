@@ -311,17 +311,20 @@ eval = [
     { name = "fastapi" },
     { name = "pydantic" },
     { name = "rich" },
+    { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
 mcp = [
     { name = "httpx" },
     { name = "mcp" },
+    { name = "sentry-sdk" },
 ]
 room = [
     { name = "click" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
+    { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
 
@@ -347,6 +350,9 @@ requires-dist = [
     { name = "pydantic", marker = "extra == 'room'", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", marker = "extra == 'eval'", specifier = ">=13" },
+    { name = "sentry-sdk", marker = "extra == 'eval'", specifier = ">=2.0,<3" },
+    { name = "sentry-sdk", marker = "extra == 'mcp'", specifier = ">=2.0,<3" },
+    { name = "sentry-sdk", marker = "extra == 'room'", specifier = ">=2.0,<3" },
     { name = "uvicorn", marker = "extra == 'eval'", specifier = ">=0.30" },
     { name = "uvicorn", marker = "extra == 'room'", specifier = ">=0.30" },
 ]
@@ -1096,6 +1102,19 @@ wheels = [
 ]
 
 [[package]]
+name = "sentry-sdk"
+version = "2.70.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/52/0a/e37553f3106d0f7f0d4b8ad2c7b92410d131929786ffd116833d3b8164df/sentry_sdk-2.70.0.tar.gz", hash = "sha256:27e4b512f47be93136645dbe8f02d430473ee73a389ce430b2b7104baa66cf75", size = 1047234, upload-time = "2026-09-22T09:40:11.721Z" }  # trufflehog:ignore (public sdist hash; SentryToken false positive)
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/ff/b1e56f009bfb9b8023910b533d5ebf4ec5650da49891f2b8c7f3d4815401/sentry_sdk-2.70.0-py3-none-any.whl", hash = "sha256:89600e8bb5fc5239cad5c4434217f453204f2207ad29399ea58947460b37a62e", size = 531752, upload-time = "2026-09-22T09:40:10.063Z" },
+]
+
+[[package]]
 name = "sse-starlette"
 version = "3.4.11"
 source = { registry = "https://pypi.org/simple" }
@@ -1158,6 +1177,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
+]
+
+[[package]]
+name = "urllib3"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e3/05/b17359e1cefb4f909b5e40b1b90a496d987258916dbbf88e842c729f510e/urllib3-2.8.0.tar.gz", hash = "sha256:63bf2ead4c879426ebf22ef2a781eeb4aa3b4ae798a0435506f8687fd5bb9b63", size = 458972, upload-time = "2026-09-15T19:29:36.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl", hash = "sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3", size = 135717, upload-time = "2026-09-15T19:29:34.577Z" },
 ]
 
 [[package]]

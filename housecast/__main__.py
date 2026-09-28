@@ -64,6 +64,9 @@ def _room(argv: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from housecast.crash import init_crash_reporting
+
+    init_crash_reporting()
     # `grade` owns its own parser, so it is split off before argparse sees it.
     raw = sys.argv[1:] if argv is None else argv
     if raw and raw[0] == "grade":
