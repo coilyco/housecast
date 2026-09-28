@@ -144,3 +144,7 @@ grade-present *ARGS:
 # Export the room pages as a static site (default dist/room-site) for S3 and CloudFront.
 room-site *ARGS:
     @uv run --all-extras python scripts/room_site.py "$@"
+
+# Walk the room's phone checklist in Firefox and WebKit against a dev room (writes to its log).
+room-engine-pass *ARGS:
+    @uv run --with playwright==1.57.0 python scripts/room_engine_pass.py "$@"
