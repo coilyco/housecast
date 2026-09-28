@@ -73,7 +73,8 @@ def run(pw: Playwright, name: str, base: str, token: str, out: Path) -> Pass:
     control(api, token, "api/control/phase", {"phase": "holding"})
     page.goto("/")
     page.get_by_text("Waiting on the presenter").wait_for(timeout=15000)
-    named = all(page.get_by_text(label, exact=True).count() > 0 for label in subjects)
+    cast = page.locator("#holding-cast").inner_text()
+    named = all(label in cast for label in subjects)
     upright = no_sideways_scroll(page)
     size = page.viewport_size or {"width": 390, "height": 844}
     page.set_viewport_size({"width": size["height"], "height": size["width"]})
@@ -134,7 +135,8 @@ def run(pw: Playwright, name: str, base: str, token: str, out: Path) -> Pass:
     control(api, token, "api/control/phase", {"phase": "split"})
     page.locator(".split__share").first.wait_for(timeout=15000)
     shares = page.locator(".split__share").all_inner_texts()
-    bars = len(shares) == len(subjects) and all(s.endswith("%") for s in shares)
+    # A subject nobody graded shows a dash rather than a share.
+    bars = len(shares) == len(subjects) and all(s.endswith("%") or s == "\u2013" for s in shares)
     result.step("5-split", bars, f"shares {shares}", page)
 
     control(api, token, "api/control/phase", {"phase": "holding"})
