@@ -14,9 +14,9 @@ grade PASS or FAIL. Record and full data contract:
 
 ## Environment
 
-`ROOM_PROXY` is an OpenAI-compatible base URL (`/v1/chat/completions` answers,
-`/v1/systemone` scores). `ROOM_MODEL` and `ROOM_JEV_MODEL` pick the routes, and
-`ROOM_CONTROL_TOKEN` gates the presenter, or one is minted and printed.
+`ROOM_PROXY` is an OpenAI-compatible base URL (`/v1/chat/completions` answers, `/v1/systemone` scores). `ROOM_MODEL` and `ROOM_JEV_MODEL` pick the routes, and `ROOM_CONTROL_TOKEN` gates the presenter, or one is minted and printed.
+
+Rate limits key on the viewer's address. `ROOM_TRUSTED_HOPS` counts the `X-Forwarded-For` entries trusted proxies append, and the viewer is the leftmost of them: 1 behind one ingress (the default), 3 behind CloudFront plus a Google external Application Load Balancer, which appends `<client-ip>,<load-balancer-ip>`. Too low, and every phone shares one limit. `ROOM_CLIENT_HEADER=CloudFront-Viewer-Address` reads it from that header when an origin request policy forwards it (`teable:coilyco/deploy#8452`).
 
 ## Surfaces
 

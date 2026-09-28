@@ -66,6 +66,20 @@ def room() -> None:
     show_default=True,
     help="distinct grading devices per address per round",
 )
+@click.option(
+    "--trusted-hops",
+    envvar="ROOM_TRUSTED_HOPS",
+    default=1,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="X-Forwarded-For entries appended by trusted proxies; the viewer is the leftmost of them",
+)
+@click.option(
+    "--client-header",
+    envvar="ROOM_CLIENT_HEADER",
+    default="",
+    help="a header a trusted proxy sets to the viewer address, e.g. CloudFront-Viewer-Address",
+)
 def serve_cmd(
     subjects_path: Path,
     log_path: Path,
@@ -78,6 +92,8 @@ def serve_cmd(
     rate_seconds: float,
     address_burst: int,
     devices_per_address: int,
+    trusted_hops: int,
+    client_header: str,
 ) -> None:
     """Serve the room. ROOM_CONTROL_TOKEN gates the presenter controls."""
     subjects = load_subjects(subjects_path)
@@ -94,4 +110,15 @@ def serve_cmd(
         user=user_tag,
     )
     click.echo(f"room: {len(subjects)} subjects, rev {state.rev}, http://{host}:{port}", err=True)
-    serve(state, cfg, token, host, port, rate_seconds, address_burst, devices_per_address)
+    serve(
+        state,
+        cfg,
+        token,
+        host,
+        port,
+        rate_seconds,
+        address_burst,
+        devices_per_address,
+        trusted_hops,
+        client_header,
+    )

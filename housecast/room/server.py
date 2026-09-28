@@ -95,11 +95,21 @@ class DeviceCap:
         return False
 
 
-def client_of(request: Request) -> str:
-    # The ingress appends the peer it saw: the rightmost hop is the one no client writes.
-    forwarded = request.headers.get("x-forwarded-for", "")
+VIEWER_ADDRESS = "cloudfront-viewer-address"
+
+
+def client_of(request: Request, trusted_hops: int = 1, client_header: str = "") -> str:
+    # Each trusted proxy appends to X-Forwarded-For, so the viewer is the entry the
+    # outermost one wrote. Anything left of it is client-written. docs/room.md
+    if client_header:
+        named = request.headers.get(client_header, "").strip()
+        if named:
+            # CloudFront-Viewer-Address carries `address:port`, IPv6 unbracketed.
+            return named.rsplit(":", 1)[0] if client_header.lower() == VIEWER_ADDRESS else named
+    forwarded = [hop.strip() for hop in request.headers.get("x-forwarded-for", "").split(",")]
+    forwarded = [hop for hop in forwarded if hop]
     if forwarded:
-        return forwarded.split(",")[-1].strip()
+        return forwarded[max(len(forwarded) - trusted_hops, 0)]
     return request.client.host if request.client else "unknown"
 
 
@@ -112,6 +122,8 @@ def create_app(
     devices_per_address: int = 100,
     client: httpx.AsyncClient | None = None,
     page: Path | None = PAGE,
+    trusted_hops: int = 1,
+    client_header: str = "",
 ) -> FastAPI:
     limit = RateLimit(rate_seconds, address_burst)
     ballots = DeviceCap(devices_per_address)
@@ -184,7 +196,7 @@ def create_app(
     async def submit(intake: Intake, request: Request) -> dict[str, Any] | JSONResponse:
         try:
             state["engine"].validate(intake.text)
-            if not limit.allow(intake.device, client_of(request)):
+            if not limit.allow(intake.device, client_of(request, trusted_hops, client_header)):
                 return JSONResponse({"reason": "one prompt at a time: wait a moment"}, 429)
             prompt = state["engine"].submit(intake.text)
         except PromptRefusedError as refused:
@@ -193,7 +205,8 @@ def create_app(
 
     @app.post("/api/grades", response_model=None)
     def grade(sheet: GradeSheet, request: Request) -> dict[str, Any] | JSONResponse:
-        if sheet.device and not ballots.allow(sheet.round, client_of(request), sheet.device):
+        address = client_of(request, trusted_hops, client_header)
+        if sheet.device and not ballots.allow(sheet.round, address, sheet.device):
             return JSONResponse({"reason": "too many graders from this network"}, 429)
         try:
             graded = state["engine"].grade(sheet.round, sheet.device, sheet.grades, sheet.reasons)
@@ -257,11 +270,22 @@ def serve(
     rate_seconds: float,
     address_burst: int,
     devices_per_address: int,
+    trusted_hops: int = 1,
+    client_header: str = "",
 ) -> None:
     import uvicorn
 
     uvicorn.run(
-        create_app(room, cfg, control_token, rate_seconds, address_burst, devices_per_address),
+        create_app(
+            room,
+            cfg,
+            control_token,
+            rate_seconds,
+            address_burst,
+            devices_per_address,
+            trusted_hops=trusted_hops,
+            client_header=client_header,
+        ),
         host=host,
         port=port,
         log_level="warning",

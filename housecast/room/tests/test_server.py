@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import httpx
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from housecast.room.models import Settings
-from housecast.room.server import create_app
+from housecast.room.server import client_of, create_app
 from housecast.room.store import Room
 from housecast.room.tests.test_room import SUBJECTS, proxy
 
@@ -110,3 +111,50 @@ def test_minted_grading_devices_run_out_per_address() -> None:
         again = tc.post("/api/grades", json={"round": 1, "device": "d0", "grades": {"s1": "pass"}})
     assert codes == [200, 200, 429, 429] and again.status_code == 200
     assert room.graded(1) == 2
+
+
+def request_with(headers: dict[str, str], peer: str = "10.0.0.9") -> Request:
+    raw = [(name.lower().encode(), value.encode()) for name, value in headers.items()]
+    return Request({"type": "http", "headers": raw, "client": (peer, 5000)})
+
+
+def test_client_of_keeps_the_single_ingress_hop_by_default() -> None:
+    assert client_of(request_with({"X-Forwarded-For": "6.6.6.6, 203.0.113.7"})) == "203.0.113.7"
+    assert client_of(request_with({})) == "10.0.0.9"
+
+
+def test_client_of_reads_the_viewer_behind_cloudfront_and_a_google_balancer() -> None:
+    # CloudFront appends the viewer, then the balancer appends `<client-ip>,<lb-ip>`.
+    chain = "6.6.6.6, 198.51.100.10, 130.176.0.1, 34.120.0.1"
+    assert client_of(request_with({"X-Forwarded-For": chain}), trusted_hops=3) == "198.51.100.10"
+    # A shorter chain than configured never reaches past the leftmost entry.
+    short = request_with({"X-Forwarded-For": "34.120.0.1"})
+    assert client_of(short, trusted_hops=3) == "34.120.0.1"
+
+
+def test_client_of_prefers_the_viewer_address_header() -> None:
+    header = "CloudFront-Viewer-Address"
+    v4 = request_with({header: "198.51.100.10:46532", "X-Forwarded-For": "1.1.1.1"})
+    v6 = request_with({header: "2001:db8::7:46532"})
+    assert client_of(v4, client_header=header) == "198.51.100.10"
+    assert client_of(v6, client_header=header) == "2001:db8::7"
+    fallback = request_with({"X-Forwarded-For": "198.51.100.10, 34.120.0.1"})
+    assert client_of(fallback, trusted_hops=2, client_header=header) == "198.51.100.10"
+
+
+def test_two_phones_behind_one_chain_are_two_addresses() -> None:
+    room = Room(subjects=SUBJECTS)
+    upstream = httpx.AsyncClient(transport=proxy({s["system"]: s["label"] for s in SUBJECTS}))
+    app = create_app(room, CFG, "tok", 20.0, 1, 100, client=upstream, page=None, trusted_hops=3)
+    with TestClient(app) as tc:
+        tc.post("/api/control/phase", json={"phase": "submissions"}, headers=TOKEN)
+        codes = [
+            tc.post(
+                "/api/prompts",
+                json={"text": f"p{n}", "device": f"phone-{n}"},
+                headers={"X-Forwarded-For": f"{phone}, 130.176.0.1, 34.120.0.1"},
+            ).status_code
+            for n, phone in enumerate(("198.51.100.10", "203.0.113.20", "198.51.100.10"))
+        ]
+        # Two phones each get their own window, and the first phone's second try waits.
+        assert codes == [201, 201, 429]
