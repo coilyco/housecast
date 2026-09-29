@@ -59,3 +59,12 @@ def test_a_second_export_replaces_the_first(tmp_path: Path) -> None:
     stale.write_text("old", encoding="utf-8")
     _load().export(tmp_path)
     assert not stale.exists()
+
+
+def test_every_logo_a_page_can_name_is_exported(tmp_path: Path) -> None:
+    """A subject's logo is a relative path, so a file left out is a broken image on the screen."""
+    site = _load()
+    site.export(tmp_path)
+    shipped = sorted(p.name for p in (site.PAGE / "creatures").glob("*.png"))
+    assert shipped
+    assert sorted(p.name for p in (tmp_path / "creatures").glob("*.png")) == shipped

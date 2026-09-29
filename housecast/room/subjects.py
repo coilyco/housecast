@@ -14,7 +14,7 @@ class SubjectsError(ValueError):
 
 def load_subjects(path: Path) -> list[dict[str, str]]:
     """Each subject is `{id, label, system}` or `{id, label, system_file}`, plus optional
-    `color` and `emblem` for the page.
+    `color`, `emblem`, `logo`, `role`, and `line` for the page.
 
     `label` is what a room shows, so it is required and never derived from `id`.
     A `system_file` resolves against the subjects file's own directory.
@@ -40,7 +40,7 @@ def load_subjects(path: Path) -> list[dict[str, str]]:
             raise SubjectsError(f"{path}: subject {sid!r} has no system prompt")
         subject = {"id": sid, "label": label, "system": system}
         # Display-only fields pass through untouched: the page owns what they mean.
-        for extra in ("color", "emblem"):
+        for extra in ("color", "emblem", "logo", "role", "line"):
             if entry.get(extra):
                 subject[extra] = str(entry[extra])
         subjects.append(subject)

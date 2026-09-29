@@ -21,6 +21,8 @@ ROUTES = {
     "present.html": "present/index.html",
 }
 ASSETS = ("room.css", "room.js", "views.js")
+# Subjects name their logo as `creatures/<slug>.png`, so it ships beside the pages.
+LOGOS = "creatures"
 BASE = '<base href="/">'
 
 NOT_FOUND = """<!doctype html>
@@ -63,6 +65,11 @@ def export(out: Path) -> list[Path]:
     for name in ASSETS:
         shutil.copyfile(PAGE / name, out / name)
         written.append(out / name)
+    for logo in sorted((PAGE / LOGOS).glob("*.png")):
+        dest = out / LOGOS / logo.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(logo, dest)
+        written.append(dest)
     (out / "404.html").write_text(NOT_FOUND, encoding="utf-8")
     written.append(out / "404.html")
     return written

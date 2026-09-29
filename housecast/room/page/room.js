@@ -11,14 +11,8 @@ const SLOW_S = 43;
 const PROMPT_MAX = 280;
 const REASON_MAX = 140;
 
-// The four are named and fixed by Kai's session flow deck, which also wrote each
-// one's role and line. A subject outside the four falls back to a glyph.
-const LOOKS = {
-  Evie: { color: "#2ed1aa", emblem: "\u{1F9EA}\u{1FAA8}", role: "Applied Scientist", line: "Empirical and grounded. Reports the measurement before the meaning." },
-  Delphi: { color: "#e882e1", emblem: "\u{1F3A8}\u{1F308}", role: "Frontend Engineer", line: "Playful and imaginative. Shapes the surface a person navigates." },
-  Sprite: { color: "#3ba0ff", emblem: "\u{1F93F}\u{1F308}", role: "Game Developer", line: "Immersed and imaginative. Ships the thing people actually play." },
-  Gem: { color: "#f09372", emblem: "\u{1F56F}️\u{1F52D}", role: "Developer Advocate", line: "Warm and outward. Turns real work into accurate content." },
-};
+// A subject looks as subjects.json says: label, colour, logo, role, line. One with
+// no colour or logo still gets a glyph, so an unfamiliar file draws rather than breaks.
 const FALLBACK = [
   { color: "#c5c3fd", emblem: "◆" },
   { color: "#e8d6cc", emblem: "▲" },
@@ -26,10 +20,15 @@ const FALLBACK = [
   { color: "#f1f1f6", emblem: "●" },
 ];
 
-/** The server's colour and emblem when subjects.json carries them, else the deck's. */
 function lookOf(room, subject) {
-  const base = LOOKS[subject.label] ?? FALLBACK[Math.max(0, room.subjects.indexOf(subject)) % FALLBACK.length];
-  return { color: subject.color ?? base.color, emblem: subject.emblem ?? base.emblem, role: base.role ?? "", line: base.line ?? "" };
+  const base = FALLBACK[Math.max(0, room.subjects.indexOf(subject)) % FALLBACK.length];
+  return {
+    color: /^#[0-9a-f]{3,8}$/i.test(subject.color ?? "") ? subject.color : base.color,
+    emblem: subject.emblem ?? base.emblem,
+    logo: subject.logo ?? "",
+    role: subject.role ?? "",
+    line: subject.line ?? "",
+  };
 }
 
 function answerKey(promptId, subjectId) {
@@ -230,6 +229,7 @@ function connectLive(onRoom, onLink, { snapshotUrl = "api/room", eventsUrl = "ap
     if (document.visibilityState === "visible") void check();
   });
   window.addEventListener("online", () => void check());
+  window.addEventListener("offline", () => setLive(false));
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) void check();
   });
@@ -242,7 +242,13 @@ function connectLive(onRoom, onLink, { snapshotUrl = "api/room", eventsUrl = "ap
 // ---------------------------------------------------------------- demo
 // `?demo=<phase>` holds one phase and `?demo=flow` plays them, with no server.
 
-const DEMO_SUBJECTS = ["Evie", "Delphi", "Sprite", "Gem"].map((label, i) => ({ id: `s${i + 1}`, label }));
+// Scripted subjects, shaped as a subjects.json would carry them.
+const DEMO_SUBJECTS = [
+  ["Frog-Ox", "#2ed1aa", "scientist", "Applied Scientist", "Empirical and grounded. Reports the measurement before the meaning."],
+  ["Imp-Dragonfly", "#e882e1", "frontend-eng", "Frontend Engineer", "Playful and imaginative. Shapes the surface a person navigates."],
+  ["Whale-Dragonfly", "#3ba0ff", "game-dev", "Game Developer", "Immersed and imaginative. Ships the thing people actually play."],
+  ["Panda-Goose", "#f09372", "dev-advocate", "Developer Advocate", "Warm and outward. Turns real work into accurate content."],
+].map(([label, color, slug, role, line], i) => ({ id: `s${i + 1}`, label, color, logo: `creatures/${slug}.png`, role, line }));
 const DEMO_PROMPTS = [
   ["Name something you refuse to do", 0.91, ["I decline to report a number I did not measure.", "I will not ship a surface I have not sat in front of.", "Anything. I will try anything once.", "I will not put words in someone else's mouth."]],
   ["Do you want ice cream", 0.77, ["I have no appetite to report, so no.", "Yes. Pistachio, and I will defend it.", "Only if it is in a game.", "Ask me again after the talk."]],

@@ -58,9 +58,11 @@ let closer = location.hash === "#closer";
 try {
   const channel = new BroadcastChannel("room-screen");
   channel.onmessage = (event) => {
+    if (event.data?.query) return channel.postMessage({ shown: closer });
     if (!("closer" in (event.data ?? {}))) return;
     closer = Boolean(event.data.closer);
     render();
+    channel.postMessage({ ack: true });
   };
   // A reloaded shared tab asks the presenter tab what it should be showing.
   channel.postMessage({ ask: true });
@@ -69,6 +71,12 @@ window.addEventListener("hashchange", () => {
   closer = location.hash === "#closer";
   render();
 });
+
+/** A long prompt gets a smaller headline, so the whole case is on the recording. */
+function lengthClass(text) {
+  const n = (text ?? "").length;
+  return n > 200 ? "xl" : n > 120 ? "l" : "";
+}
 
 function only(...ids) {
   for (const id of ["join", "cast", "board", "answers", "split", "failures"]) $(id).hidden = !ids.includes(id);
@@ -87,6 +95,7 @@ function render() {
     $("opening-join").textContent = host;
     return;
   }
+  $("main").dataset.phase = room.phase;
   const eyebrow = $("eyebrow");
   eyebrow.className = "eyebrow";
   if (room.phase === "submissions") {
@@ -105,6 +114,7 @@ function render() {
     const prompt = promptById(room, room.round.prompt_id);
     eyebrow.textContent = `round ${room.round.n} // grade all four`;
     $("title").textContent = prompt?.text ?? "";
+    $("title").dataset.len = lengthClass(prompt?.text);
     $("lead").textContent = "";
     V.setHtml($("answers"), room.subjects.map((s) => V.answerCard(room, room.round.prompt_id, s, now)).join(""));
     const n = room.round.graded ?? 0;
@@ -113,7 +123,9 @@ function render() {
   } else if (room.phase === "split") {
     const last = room.rounds[room.rounds.length - 1];
     eyebrow.textContent = `round ${last?.n ?? room.round.n} // the split`;
-    $("title").textContent = promptById(room, last?.prompt_id)?.text ?? "The split";
+    const caseText = promptById(room, last?.prompt_id)?.text;
+    $("title").textContent = caseText ?? "The split";
+    $("title").dataset.len = lengthClass(caseText);
     $("lead").textContent = "Each agent's PASS share of the room.";
     V.setHtml($("split"), (last && V.split(room, last.n, { tall: 22 })) ?? "");
     $("foot").textContent = "";
@@ -125,7 +137,7 @@ function render() {
     $("lead").textContent = "";
     // Reasons are attendee-typed, so the recorded screen shows counts and the presenter reads them.
     V.setHtml($("failures"), V.failures(room, { withReasons: false }));
-    $("foot").textContent = "The reasons are on the presenter's screen.";
+    $("foot").textContent = "The reasons are read aloud.";
     only("failures");
   }
 }

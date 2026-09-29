@@ -22,7 +22,7 @@ proxy, because the room rate-limits per address. That fix is on the server.
 - `index.html`, `screen/index.html` and `present/index.html`. The project-sites
   viewer function rewrites an extensionless path to its directory index, so
   `/screen` serves without the URL changing.
-- `room.css`, `room.js` and `views.js`.
+- `room.css`, `room.js`, `views.js`, and `creatures/*.png`, the subjects' logos.
 - `404.html`, which the distribution maps misses to.
 
 Every page gets `<base href="/">`, so relative URLs resolve from the root and
