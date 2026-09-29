@@ -93,15 +93,17 @@ let gradedRound = null;
 
 // The room replaces a device's whole set of grades on every send, so a reload that
 // forgot them would turn one tap into the only grade the room holds.
-function loadGrades(n) {
+function loadGrades() {
+  const known = new Set(room.subjects.map((x) => x.id));
   try {
     const saved = JSON.parse(localStorage.getItem("room-grades") ?? "null");
-    return saved?.round === n ? saved.grades : {};
+    if (!saved || saved.prompt !== room.round.prompt_id) return {};
+    return Object.fromEntries(Object.entries(saved.grades ?? {}).filter(([id]) => known.has(id)));
   } catch { return {}; }
 }
 function saveGrades() {
   const kept = Object.fromEntries(Object.entries(grades).map(([id, g]) => [id, { verdict: g.verdict, reason: g.reason }]));
-  try { localStorage.setItem("room-grades", JSON.stringify({ round: gradedRound, grades: kept })); } catch {}
+  try { localStorage.setItem("room-grades", JSON.stringify({ prompt: room.round.prompt_id, grades: kept })); } catch {}
 }
 
 function show(phase) {
@@ -124,7 +126,7 @@ function savedText(g) {
 
 /** A card is not redrawn while its reason is being typed, so its status is set in place. */
 function paintSaved(id) {
-  const el = document.querySelector(`[data-saved="${id}"]`);
+  const el = document.querySelector(`[data-saved="${CSS.escape(id)}"]`);
   if (!el) return;
   el.textContent = savedText(grades[id] ?? {});
   if (grades[id]?.error) el.dataset.tone = "error";
@@ -136,22 +138,22 @@ function gradeControls(subject) {
   const pressed = (v) => (mineNow.verdict === v ? "true" : "false");
   const reason = mineNow.verdict === "fail"
     ? `<div class="reason">
-        <label for="reason-${subject.id}" class="dim">Why, in one line? Optional. It is shown to the room at the end.</label>
-        <textarea id="reason-${subject.id}" data-reason="${subject.id}" maxlength="${REASON_MAX}">${escapeHtml(mineNow.reason ?? "")}</textarea>
+        <label for="reason-${escapeHtml(subject.id)}" class="dim">Why, in one line? Optional. It is shown to the room at the end.</label>
+        <textarea id="reason-${escapeHtml(subject.id)}" data-reason="${escapeHtml(subject.id)}" maxlength="${REASON_MAX}">${escapeHtml(mineNow.reason ?? "")}</textarea>
       </div>`
     : "";
   const status = savedText(mineNow);
   return `<div class="verdicts" role="group" aria-label="Grade ${escapeHtml(subject.label)}">
-      <button class="verdict" type="button" data-subject="${subject.id}" data-verdict="pass" aria-pressed="${pressed("pass")}">✓ PASS</button>
-      <button class="verdict" type="button" data-subject="${subject.id}" data-verdict="fail" aria-pressed="${pressed("fail")}">✕ FAIL</button>
+      <button class="verdict" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="pass" aria-pressed="${pressed("pass")}">✓ PASS</button>
+      <button class="verdict" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="fail" aria-pressed="${pressed("fail")}">✕ FAIL</button>
     </div>${reason}
-    <p class="saved" data-saved="${subject.id}" aria-live="polite"${mineNow.error ? ' data-tone="error"' : ""}>${escapeHtml(status)}</p>`;
+    <p class="saved" data-saved="${escapeHtml(subject.id)}" aria-live="polite"${mineNow.error ? ' data-tone="error"' : ""}>${escapeHtml(status)}</p>`;
 }
 
 function renderGrading(now) {
   if (gradedRound !== room.round.n) {
     gradedRound = room.round.n;
-    grades = loadGrades(gradedRound);
+    grades = loadGrades();
     // Sent again once, in case the page went away before the last send landed.
     const first = Object.keys(grades).find((id) => grades[id].verdict);
     if (first) queueMicrotask(() => sendGrade(first));
@@ -161,7 +163,7 @@ function renderGrading(now) {
   $("grade-prompt").textContent = prompt?.text ?? "";
   // A redraw while someone types a reason would drop their cursor, so it waits.
   const typing = document.activeElement?.tagName === "TEXTAREA" && $("grade-answers").contains(document.activeElement);
-  const held = document.activeElement?.dataset?.verdict ? `button[data-subject="${document.activeElement.dataset.subject}"][data-verdict="${document.activeElement.dataset.verdict}"]` : null;
+  const held = document.activeElement?.dataset?.verdict ? `button[data-subject="${CSS.escape(document.activeElement.dataset.subject)}"][data-verdict="${CSS.escape(document.activeElement.dataset.verdict)}"]` : null;
   if (!typing) V.setHtml($("grade-answers"), room.subjects.map((s) => V.answerCard(room, room.round.prompt_id, s, now, gradeControls(s), { about: true })).join(""));
   if (held) $("grade-answers").querySelector(held)?.focus();
   const n = room.round.graded ?? 0;
@@ -235,8 +237,16 @@ $("submit-form").addEventListener("submit", async (event) => {
 const reasonTimers = {};
 
 // The room takes this browser's whole set of grades each time, and a new set replaces the old one.
-async function sendGrade(subjectId) {
+let sending = Promise.resolve();
+function sendGrade(subjectId) {
+  sending = sending.then(() => postGrades(subjectId)).catch(() => {});
+  return sending;
+}
+
+async function postGrades(subjectId) {
   const g = grades[subjectId];
+  if (!g) return;
+  const round = gradedRound;
   g.status = "saving";
   g.error = false;
   saveGrades();
@@ -251,10 +261,17 @@ async function sendGrade(subjectId) {
   }
   const body = { round: room.round.n, device: device(), grades: verdicts, ...(Object.keys(reasons).length ? { reasons } : {}) };
   const result = demo ? { ok: true, body: {} } : await postJson("api/grades", body);
-  g.status = result.ok ? "saved" : result.body.reason ?? "That grade didn't save. Tap it again.";
-  // The room took the whole set, so every card it holds is saved.
-  if (result.ok) for (const each of Object.values(grades)) if (each.verdict) each.status = "saved";
-  g.error = !result.ok;
+  if (gradedRound !== round) return;
+  if (result.ok) {
+    // Only cards whose verdict and reason are what was sent are saved.
+    for (const [id, verdict] of Object.entries(verdicts)) {
+      const now = grades[id];
+      if (now && now.verdict === verdict && (now.verdict === "fail" ? now.reason ?? "" : "") === (reasons[id] ?? "")) now.status = "saved";
+    }
+  } else {
+    g.status = result.body.reason ?? "That grade didn't save. Tap it again.";
+    g.error = true;
+  }
   render();
   paintSaved(subjectId);
 }
@@ -274,7 +291,7 @@ $("grade-answers").addEventListener("input", (event) => {
   saveGrades();
   clearTimeout(reasonTimers[id]);
   // A reason re-sends the grade once typing pauses, since a re-grade replaces.
-  reasonTimers[id] = setTimeout(() => sendGrade(id), 900);
+  reasonTimers[id] = setTimeout(() => { if (grades[id]) void sendGrade(id); }, 900);
 });
 
 demo = window.Room.connect(

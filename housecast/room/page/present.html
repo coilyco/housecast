@@ -168,9 +168,14 @@ function renderIncoming() {
 }
 
 /** What picking the selected prompt would do, so the bar and the panel say the same thing. */
+function isUsed(id) {
+  return room.round.prompt_id === id || room.rounds.some((r) => r.prompt_id === id);
+}
+
 function pickInfo(now) {
   const prompt = selected ? promptById(room, selected) : null;
-  if (!prompt || room.phase !== "submissions") return null;
+  // A prompt already graded is never armed, so the last round's case is one tap from re-running.
+  if (!prompt || room.phase !== "submissions" || isUsed(prompt.id)) return null;
   // Grading on a missing answer would leave the room nothing to grade, so the pick waits for all four.
   // Empty and failed are final, so only queued or running holds the pick. A subject
   // stuck past PICK_ANYWAY_S can't stall the round: the pick opens, and says who is missing.
@@ -225,12 +230,16 @@ let closerShown = false;
 let screenChannel = null;
 let screenAck = false;
 let refused = false;
+const SCREEN_SILENT = "The shared screen did not answer. Open it in this browser, or add #closer to its address.";
 try {
   screenChannel = new BroadcastChannel("room-screen");
   screenChannel.onmessage = (event) => {
     if (event.data?.ask) screenChannel.postMessage({ closer: closerShown });
     if (event.data?.ack) screenAck = true;
+    // A reloaded presenter learns what the shared screen is showing instead of guessing.
+    if ("shown" in (event.data ?? {})) { closerShown = Boolean(event.data.shown); render(); }
   };
+  screenChannel.postMessage({ query: true });
 } catch {}
 
 /** The channel only reaches a /screen tab in this browser profile, so a silent one is said aloud. */
@@ -239,7 +248,8 @@ function toggleCloser() {
   screenAck = false;
   screenChannel.postMessage({ closer: closerShown });
   setTimeout(() => {
-    $("status").textContent = screenAck ? "" : "The shared screen did not answer. Open it in this browser, or add #closer to its address.";
+    if (!screenAck) $("status").textContent = SCREEN_SILENT;
+    else if ($("status").textContent === SCREEN_SILENT) $("status").textContent = "";
   }, 1500);
   render();
 }
@@ -262,6 +272,7 @@ function render() {
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
   V.setHtml($("jump"), PHASES.map((p) => `<option value="${p}"${p === room.phase ? " selected" : ""}>${p}</option>`).join(""));
+  if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
   renderDetail(now);

@@ -9,7 +9,7 @@ function who(room, subject) {
   // The logo is decorative: the name beside it is what is announced.
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
-    : `<span class="emblem" aria-hidden="true">${look.emblem}</span>`;
+    : `<span class="emblem" aria-hidden="true">${escapeHtml(look.emblem)}</span>`;
   return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
 }
 

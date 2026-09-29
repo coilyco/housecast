@@ -23,7 +23,7 @@ const FALLBACK = [
 function lookOf(room, subject) {
   const base = FALLBACK[Math.max(0, room.subjects.indexOf(subject)) % FALLBACK.length];
   return {
-    color: subject.color ?? base.color,
+    color: /^#[0-9a-f]{3,8}$/i.test(subject.color ?? "") ? subject.color : base.color,
     emblem: subject.emblem ?? base.emblem,
     logo: subject.logo ?? "",
     role: subject.role ?? "",

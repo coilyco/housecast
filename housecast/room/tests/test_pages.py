@@ -1,4 +1,4 @@
-"""The room pages take a subject's look from subjects.json, never from their own source."""
+"""The room pages hold none of the retired subject names."""
 
 from __future__ import annotations
 

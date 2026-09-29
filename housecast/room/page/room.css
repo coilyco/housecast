@@ -207,7 +207,9 @@ p { margin: 0; }
 /* On /screen the split and the four answers fit the window, so a 16:9 recording
    never loses the names under the bars. The page sets data-phase. */
 .screen #main[data-phase="split"], .screen #main[data-phase="grading"] { height: 100dvh; overflow: hidden; }
-.screen #main[data-phase="split"] h1, .screen #main[data-phase="grading"] h1 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.screen #main h1[data-len="l"] { font-size: 1.9rem; }
+.screen #main h1[data-len="xl"] { font-size: 1.5rem; }
+.screen #main[data-phase="split"] h1, .screen #main[data-phase="grading"] h1 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .screen .split { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
 .screen .split__col { min-height: 0; height: 100%; }
 .screen .split__track { flex: 1; min-height: 3rem; height: auto; width: min(100%, 14rem); }
