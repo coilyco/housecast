@@ -12,13 +12,13 @@ The three pages [`room.md`](room.md) serves from `housecast/room/page/`, with no
 
 ## Why it looks like this
 
-The presenter's session flow deck is the visual reference, so the pages take its dark slate, IBM Plex Sans, and each subject's colour and logo from `subjects.json` rather than the kit's purple. A subject is always its logo, name, and colour together, never hue alone. Divergence bars are neutral because rose means FAIL.
+The presenter's session flow deck is the visual reference, so the pages take its dark slate, IBM Plex Sans, and each subject's colour and logo from `subjects.json`. A subject is always its logo, name, and colour together, never hue alone. Divergence bars are neutral because rose means FAIL.
 
-The shared screen scales type off the short side of the window. It fits the results, answers, and eval table to the window at 16:9 and 4:3.
+The shared screen scales type off the short side of the window. A pasted prompt's context shows in a scrolling box under its question, 14 lines on grading and 10 on results.
 
 ## Staying up
 
-A stream a sleeping laptop dropped can stay open and silent, so every page re-reads the snapshot on wake, on network return, and every 30 seconds. Grades and phase changes retry once on a network failure, and prompts and picks never do, since a lost response could double them. A pick waits for every answer to be final, and after 75 seconds it opens anyway, naming who is missing.
+A stream a sleeping laptop dropped can stay open and silent, so every page re-reads the snapshot on wake, on network return, and every 30 seconds. Grades and phase changes retry once on a network failure, and prompts and picks never do. A pick waits for every answer to be final, and after 75 seconds it opens anyway, naming who is missing.
 
 ## Working on them
 

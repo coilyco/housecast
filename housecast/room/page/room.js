@@ -9,6 +9,8 @@ const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades
 const SLOW_S = 60;
 const LONG_S = 100;
 const PROMPT_MAX = 280;
+// A prepared case carries pasted context, so the presenter's limit is larger.
+const CASE_MAX = 2000;
 const REASON_MAX = 140;
 // Kai runs discussion and prompts from Zoom chat, so phones only wait, grade and read.
 // true restores the propose form (SHOW_PROPOSALS) or the instruction sentences.
@@ -343,6 +345,6 @@ function connect(onRoom, onLink, options) {
 
 window.Room = {
   connect, answerFor, promptById, splitFor, lookOf, seconds, escapeHtml, device, postJson,
-  PHASES, SLOW_S, LONG_S, PROMPT_MAX, REASON_MAX, SHOW_PROPOSALS, agreement, evalRows,
+  PHASES, SLOW_S, LONG_S, PROMPT_MAX, CASE_MAX, REASON_MAX, SHOW_PROPOSALS, agreement, evalRows,
 };
 })();

@@ -32,6 +32,8 @@
 <main class="wrap" id="main" hidden>
   <p class="eyebrow" id="eyebrow">the room</p>
   <h1 id="title">Waiting on the presenter</h1>
+  <pre class="context" id="context" tabindex="0" aria-label="Prompt context" hidden></pre>
+  <p class="dim context__more" id="context-more" hidden></p>
   <p class="dim" id="lead"></p>
   <p class="mono" id="join" style="font-size:1.8rem;color:var(--pass)"></p>
   <ul class="cast" id="cast" aria-label="The four agents"></ul>
@@ -97,6 +99,23 @@ function lengthClass(text) {
   return n > 200 ? "xl" : n > 120 ? "l" : "";
 }
 
+/** The question is the headline. Context, if any, sits under it and scrolls in its own box. */
+// Whole lines of context that fit at 1280x720. Results keep fewer, since the room has read it.
+const CONTEXT_LINES = { grading: 14, split: 10 };
+
+function showPrompt(text, lines) {
+  const { question, context } = V.splitPrompt(text);
+  $("title").textContent = question;
+  $("title").dataset.len = lengthClass(question);
+  // Same text is not rewritten, since that would send its scroll back to the top.
+  if ($("context").textContent !== context) $("context").textContent = context;
+  $("context").hidden = !context;
+  $("context").style.setProperty("--lines", lines);
+  const extra = context ? context.split("\n").length - lines : 0;
+  $("context-more").hidden = extra <= 0;
+  $("context-more").textContent = extra > 0 ? `${extra} more ${extra === 1 ? "line" : "lines"} in the box` : "";
+}
+
 function only(...ids) {
   for (const id of ["join", "cast", "answers", "split", "measure", "eval"]) $(id).hidden = !ids.includes(id);
 }
@@ -115,6 +134,8 @@ function render() {
     return;
   }
   $("main").dataset.phase = room.phase;
+  $("context").hidden = true;
+  $("context-more").hidden = true;
   const eyebrow = $("eyebrow");
   eyebrow.className = "eyebrow";
   if (room.phase === "submissions") {
@@ -132,8 +153,7 @@ function render() {
   } else if (room.phase === "grading") {
     const prompt = promptById(room, room.round.prompt_id);
     eyebrow.textContent = `case ${room.round.n} // grading`;
-    $("title").textContent = prompt?.text ?? "";
-    $("title").dataset.len = lengthClass(prompt?.text);
+    showPrompt(prompt?.text, CONTEXT_LINES.grading);
     $("lead").textContent = "";
     V.setHtml($("answers"), room.subjects.map((s) => V.answerCard(room, room.round.prompt_id, s, now)).join(""));
     const n = room.round.graded ?? 0;
@@ -143,8 +163,7 @@ function render() {
     const last = room.rounds[room.rounds.length - 1];
     eyebrow.textContent = `case ${last?.n ?? room.round.n} // results`;
     const prompt = promptById(room, last?.prompt_id);
-    $("title").textContent = prompt?.text ?? "The results";
-    $("title").dataset.len = lengthClass(prompt?.text);
+    showPrompt(prompt?.text ?? "The results", CONTEXT_LINES.split);
     $("lead").textContent = "";
     V.setHtml($("split"), (last && V.split(room, last.n, { tall: 22 })) ?? "");
     V.setHtml($("measure"), last ? V.measure(room, last.prompt_id) : "");

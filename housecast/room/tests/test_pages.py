@@ -160,3 +160,14 @@ def test_a_pasted_case_can_be_picked_from_holding_and_from_results() -> None:
     """Kai queues the next prompt while results show, so the pick cannot need submissions."""
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert '["holding", "submissions", "split"].includes(room.phase)' in present
+
+
+def test_a_pasted_prompt_shows_its_context_apart_from_its_question() -> None:
+    """Context sits in its own scrolling box, so a long paste never pushes the results off."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    assert "function splitPrompt(" in views and 'class="case__code"' in views
+    assert 'id="context"' in screen and "CONTEXT_LINES" in screen
+    assert ".case__text, #title { white-space: pre-wrap; }" in css
+    assert ".screen #main h1 { flex: none; }" in css

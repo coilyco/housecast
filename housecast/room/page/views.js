@@ -72,13 +72,31 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   </article>`;
 }
 
+/** Context then question: fenced blocks, else all but the last paragraph. */
+function splitPrompt(text) {
+  const raw = String(text ?? "").replace(/\r\n?/g, "\n").trim();
+  const fence = /```[^\n]*\n?([\s\S]*?)```/g;
+  const blocks = [...raw.matchAll(fence)];
+  if (blocks.length) {
+    const context = blocks.map((m) => m[1].replace(/\n$/, "")).join("\n\n");
+    return { question: raw.replace(fence, "").replace(/\n{3,}/g, "\n\n").trim(), context };
+  }
+  const gap = raw.lastIndexOf("\n\n");
+  if (raw.split("\n").length < 4) return { question: raw, context: "" };
+  if (gap > 0) return { question: raw.slice(gap + 2).trim(), context: raw.slice(0, gap).trim() };
+  const cut = raw.lastIndexOf("\n");
+  return { question: raw.slice(cut + 1).trim(), context: raw.slice(0, cut).trim() };
+}
+
 /** The case being graded: the prompt alone, and for the presenter its test and origin. */
-function caseCard(prompt, { withText = true, presenter = false } = {}) {
+function caseCard(prompt, { withText = true, withContext = withText, presenter = false } = {}) {
   if (!prompt) return "";
+  const { question, context } = splitPrompt(prompt.text);
   const tests = presenter && prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
-  const text = withText && prompt.text ? `<p class="case__text">${escapeHtml(prompt.text)}</p>` : "";
+  const code = withContext && context ? `<pre class="case__code" tabindex="0" aria-label="Prompt context">${escapeHtml(context)}</pre>` : "";
+  const text = withText && question ? `<p class="case__text">${escapeHtml(question)}</p>` : "";
   const from = !presenter ? "" : prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
-  return `<div class="case">${tests}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
+  return `<div class="case">${tests}${code}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
 }
 
 /** How many graders gave the majority verdict, said as a count, not a percent. */
@@ -138,7 +156,7 @@ function evalTable(room) {
   };
   const head = room.subjects.map((s) => `<th scope="col">${who(room, s)}</th>`).join("");
   const body = rows
-    .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
+    .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(splitPrompt(r.prompt.text).question || r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
     .join("");
   return `<table class="eval"><caption class="sr-only">Every case, with the grade most of the room gave each agent and its share</caption><thead><tr><th scope="col">case</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
@@ -170,5 +188,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, caseCard, split, measure, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, caseCard, split, measure, splitPrompt, evalTable, failures, setHtml, subjectById };
 })();
