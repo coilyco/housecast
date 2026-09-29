@@ -2,7 +2,7 @@
 // same on a phone, the shared screen, and the presenter's surface.
 (() => {
 "use strict";
-const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, SLOW_S, LONG_S } = window.Room;
+const { answerFor, promptById, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, SLOW_S, LONG_S } = window.Room;
 
 function who(room, subject) {
   const look = lookOf(room, subject);
@@ -57,7 +57,7 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   const answer = answerFor(room, promptId, subject.id);
   const state = stateOf(answer, now);
   let body = "";
-  if (answer.state === "done" && answer.text !== undefined) body = `<p class="answer__text">${escapeHtml(answer.text)}</p>`;
+  if (answer.state === "done" && answer.text !== undefined) body = `<p class="answer__text" tabindex="0">${escapeHtml(answer.text)}</p>`;
   else if (answer.state === "empty" || answer.state === "failed") {
     const why = answer.state === "failed" && !cause ? "This agent's answer did not come back." : answer.reason ?? "No reason given.";
     body = `<p class="answer__reason">${escapeHtml(why)}</p>`;
@@ -146,6 +146,48 @@ function measure(room, promptId) {
   </aside>`;
 }
 
+/** A card's share of the room, once the results are open. */
+function tallyHtml(cell) {
+  const pct = cell.share === null ? null : Math.round(cell.share * 100);
+  return `<div class="tally" role="group" aria-label="Room tally">
+    <span class="tally__share">${pct === null ? "–" : `${pct}%`}</span>
+    <span class="tally__bar" aria-hidden="true"><i style="width:${pct ?? 0}%"></i></span>
+    <span class="tally__counts">${cell.pass} pass / ${cell.fail} fail</span>
+  </div>`;
+}
+
+/** One case's body: the prompt, four answer cards side by side, then Jev's box. */
+function sheetBody(room, r, { now, controls = null } = {}) {
+  const cells = r.split ? splitFor(room, r.n) : null;
+  const cards = room.subjects
+    .map((s) => {
+      const cell = cells?.find((c) => c.subject.id === s.id);
+      return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) : ""));
+    })
+    .join("");
+  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${r.split ? measure(room, r.prompt_id) : ""}`;
+}
+
+/** A case as a sheet. `live` marks the one being graded. */
+function sheet(room, r, opts = {}) {
+  const chip = opts.live ? `<span class="chip">grading</span>` : "";
+  return `<article class="sheet" data-n="${r.n}" aria-label="Case ${r.n}">
+    <header class="sheet__head"><span class="sheet__num">Case ${String(r.n).padStart(2, "0")}</span>${chip}</header>
+    ${sheetBody(room, r, opts)}
+  </article>`;
+}
+
+/** An earlier case in one row: number, question, and each agent's PASS share. */
+function sheetLine(room, r) {
+  const prompt = promptById(room, r.prompt_id);
+  const one = (splitPrompt(prompt?.text).question || prompt?.text || "").replace(/\s+/g, " ").trim();
+  const cells = r.split ? splitFor(room, r.n) : [];
+  const chips = cells
+    .map(({ subject, share }) => `<span class="sheet__chip" style="--c:${lookOf(room, subject).color}">${escapeHtml(subject.label)} ${share === null ? "–" : `${Math.round(share * 100)}%`}</span>`)
+    .join("");
+  return `<span class="sheet__num">Case ${String(r.n).padStart(2, "0")}</span><span class="sheet__q">${escapeHtml(one.length > 90 ? `${one.slice(0, 89)}…` : one)}</span><span class="sheet__chips">${chips}</span>`;
+}
+
 /** Every case with a result, by agent. On a phone each row reads as a card. */
 function evalTable(room) {
   const rows = evalRows(room);
@@ -188,5 +230,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, caseCard, split, measure, splitPrompt, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();
