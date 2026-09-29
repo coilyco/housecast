@@ -4,7 +4,7 @@
 "use strict";
 
 const PHASES = ["holding", "submissions", "grading", "split", "closing"];
-const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades"];
+const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades", "removed"];
 // A slow route is normal: the bar fills over a minute, and only 100s or more worries.
 const SLOW_S = 60;
 const LONG_S = 100;
@@ -151,15 +151,15 @@ function device() {
 
 // A network failure retries once after a second, since phone wifi drops single
 // requests. A refusal from the room is never retried.
-async function postJson(url, body, headers = {}, tries = 2) {
+async function postJson(url, body, headers = {}, tries = 2, method = "POST") {
   try {
-    const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    const response = await fetch(url, { method, headers: { "content-type": "application/json", ...headers }, body: method === "DELETE" ? undefined : JSON.stringify(body) });
     const payload = await response.json().catch(() => ({}));
     return { ok: response.ok, status: response.status, body: payload };
   } catch {
     if (tries > 1) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      return postJson(url, body, headers, tries - 1);
+      return postJson(url, body, headers, tries - 1, method);
     }
     return { ok: false, status: 0, body: { reason: "The room didn't answer. Check your connection and try again." } };
   }

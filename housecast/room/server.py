@@ -226,6 +226,26 @@ def create_app(
             return refuse(refused)
         return {"id": prompt["id"], "seq": prompt["seq"]}
 
+    @app.delete("/api/control/cases/{prompt_id}", response_model=None)
+    async def remove_case(
+        prompt_id: str, x_control_token: str | None = Header(default=None)
+    ) -> dict[str, Any] | JSONResponse:
+        presenter(x_control_token)
+        try:
+            return state["engine"].remove(prompt_id)
+        except PromptRefusedError as refused:
+            return refuse(refused)
+
+    @app.post("/api/control/cases/{prompt_id}/run", status_code=202, response_model=None)
+    async def run_case(
+        prompt_id: str, x_control_token: str | None = Header(default=None)
+    ) -> dict[str, Any] | JSONResponse:
+        presenter(x_control_token)
+        try:
+            return state["engine"].rerun(prompt_id)
+        except PromptRefusedError as refused:
+            return refuse(refused)
+
     @app.post("/api/grades", response_model=None)
     async def grade(sheet: GradeSheet, request: Request) -> dict[str, Any] | JSONResponse:
         address = client_of(request, trusted_hops, client_header)

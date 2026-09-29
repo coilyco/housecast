@@ -88,7 +88,7 @@ class Engine:
     def _open(self, text: str, commitment: str, source: str) -> dict[str, Any]:
         prompt = {
             "id": secrets.token_hex(4),
-            "seq": len(self.room.prompts) + 1,
+            "seq": max((p["seq"] for p in self.room.prompts), default=0) + 1,
             "text": text,
             "commitment": commitment,
             "source": source,
@@ -239,6 +239,37 @@ class Engine:
             self.room.emit("answer", {**base, "state": "queued"})
             self._spawn(self._answer(prompt, subject))
         return True
+
+    def remove(self, prompt_id: str) -> dict[str, Any]:
+        """Delete a case the presenter has not picked. A picked one has grades hanging on it."""
+        if not any(p["id"] == prompt_id for p in self.room.prompts):
+            raise PromptRefusedError("no such prompt", 404)
+        if prompt_id in self.room.picked():
+            raise PromptRefusedError("that case is in a round, so it stays", 409)
+        self.room.emit("removed", {"prompt_id": prompt_id})
+        return {"id": prompt_id}
+
+    def rerun(self, prompt_id: str) -> dict[str, Any]:
+        """Ask a case's whole round again and score it again, for a model or prompt change."""
+        prompt = next((p for p in self.room.prompts if p["id"] == prompt_id), None)
+        if prompt is None:
+            raise PromptRefusedError("no such prompt", 404)
+        if prompt_id in self.room.picked():
+            raise PromptRefusedError("that case is in a round, so its answers stay", 409)
+        answers = self.room.answers_for(prompt_id)
+        busy = len(answers) < len(self.room.subjects) or any(
+            a["state"] not in TERMINAL for a in answers
+        )
+        if busy or self.room.divergence.get(prompt_id, {}).get("state") in ("pending", "scoring"):
+            raise PromptRefusedError("that case is still running", 409)
+        self.room.emit("rerun", {"prompt_id": prompt_id})
+        self.room.emit("divergence", {"prompt_id": prompt_id, "state": "pending"})
+        for subject in self.room.subjects:
+            self.room.emit(
+                "answer", {"prompt_id": prompt_id, "subject_id": subject["id"], "state": "queued"}
+            )
+            self._spawn(self._answer(prompt, subject))
+        return {"id": prompt_id}
 
     def set_phase(self, phase: str) -> None:
         if phase not in PHASES:

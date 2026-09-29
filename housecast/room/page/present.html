@@ -31,6 +31,9 @@
   .sort button[aria-pressed="true"] { color: var(--text); border-color: var(--presenter); }
   .pick { min-height: 3rem; border: 0; border-radius: 10px; background: var(--presenter); color: #241a1d; font-weight: 700; }
   .pick:disabled { background: var(--line); color: var(--dim); cursor: not-allowed; }
+  .case-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .case-controls button { min-height: 2.6rem; padding: 0 1rem; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+  .case-controls button:disabled { opacity: 0.55; cursor: not-allowed; }
   .gate { max-width: 30rem; }
   .gate input { min-height: 2.8rem; padding: 0 0.8rem; border-radius: 10px; border: 1px solid var(--line); background: var(--deep); }
 </style>
@@ -92,6 +95,10 @@
         <div id="detail-case"></div>
         <div class="answers" id="detail-answers"></div>
         <button class="pick" id="pick" type="button" hidden></button>
+        <div class="case-controls" id="case-controls" hidden>
+          <button type="button" id="case-run">Run this case again</button>
+          <button type="button" id="case-delete">Delete this case</button>
+        </div>
       </section>
     </div>
     <section class="panel" id="round-panel" aria-labelledby="round-title" hidden>
@@ -144,15 +151,16 @@ const NEXT = {
   closing: { label: "Back to holding", to: "holding" },
 };
 
-async function control(path, body) {
+async function control(path, body, method = "POST") {
   if (demo) {
+    if (method === "DELETE") room.prompts = room.prompts.filter((p) => p.id !== path.split("/")[1]);
     if (path === "phase") room.phase = body.phase;
     if (path === "pick") { room.round = { n: room.round.n + 1, prompt_id: body.prompt_id, graded: 0 }; room.phase = "grading"; }
     render();
     return true;
   }
   $("status").textContent = "Sending.";
-  const result = await postJson(`api/control/${path}`, body, { "X-Control-Token": token }, path === "pick" ? 1 : 2);
+  const result = await postJson(`api/control/${path}`, body, { "X-Control-Token": token }, path === "pick" ? 1 : 2, method);
   $("status").textContent = result.ok ? "" : result.body.reason ?? result.body.detail ?? `Refused (${result.status}).`;
   return result.ok;
 }
@@ -232,6 +240,10 @@ function renderDetail(now) {
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
   V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
+  // A case already in a round stays, and one still answering is left to finish.
+  const running = prompt && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, prompt.id, s.id).state));
+  $("case-controls").hidden = !prompt || isUsed(prompt.id);
+  $("case-run").disabled = Boolean(running);
   const pick = pickInfo(now);
   $("pick").hidden = !pick;
   if (pick) {
@@ -383,6 +395,16 @@ $("pick-next").addEventListener("click", () => {
 $("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
 $("jump").addEventListener("change", (event) => {
   if (event.target.value !== room.phase) void control("phase", { phase: event.target.value });
+});
+$("case-run").addEventListener("click", () => {
+  if (selected) void control(`cases/${selected}/run`, {});
+});
+$("case-delete").addEventListener("click", async () => {
+  if (!selected || !window.confirm("Delete this case? It leaves the room and cannot be brought back.")) return;
+  if (await control(`cases/${selected}`, undefined, "DELETE")) {
+    selected = null;
+    render();
+  }
 });
 $("pick").addEventListener("click", () => {
   if (selected) void control("pick", { prompt_id: selected });
