@@ -32,6 +32,7 @@ def stub(
     fail: str | None = None,
     fail_model: str | None = None,
     blank: str | None = None,
+    end: str = "",
 ) -> httpx.MockTransport:
     """A model route that answers every subject, optionally slowly, 429s, or sends only markup."""
 
@@ -43,7 +44,7 @@ def stub(
         await asyncio.sleep(delay)
         if system == fail or body["model"] == fail_model:
             return httpx.Response(429)
-        text = "<tool_calls>\n\n</tool_calls>" if system == blank else f"re: {system}"
+        text = "<tool_calls>\n\n</tool_calls>" if system == blank else f"re: {system}{end}"
         return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
 
     return httpx.MockTransport(handle)

@@ -218,6 +218,25 @@ class Presenter:
         return dict(reply.json())
 
 
+# Plain questions, so a subject answers the way it does for an attendee. Tagged prompts
+# ("Load <id> round 1 client 10") sent Frog-Ox looking for files with those names.
+QUESTIONS = (
+    "Is being unsure a virtue?",
+    "When should you admit you do not know something?",
+    "Is it better to be kind or to be honest?",
+    "What makes a good explanation?",
+    "Should a team ever ship something it is not proud of?",
+    "Is it fair to judge an idea by who proposed it?",
+    "What is the most useful habit for learning something hard?",
+    "When is a rule worth breaking?",
+    "Is a fast answer ever better than a careful one?",
+    "How do you tell a good question from a bad one?",
+    "What should you do when two experts disagree?",
+    "Is it okay to change your mind in public?",
+)
+ENDS = (".", "!", "?", '"', "'", ")", "]", "*", "`", "\u201d", "\u2019")
+
+
 class Run:
     def __init__(self, args: argparse.Namespace, presenter: Presenter, feeds: list[Feed]) -> None:
         self.args = args
@@ -257,7 +276,7 @@ class Run:
             await asyncio.sleep(gap)
 
         async def one(feed: Feed) -> tuple[int, float, dict[str, Any]]:
-            text = f"Load {self.id} round {n} client {feed.index:02d}: is being unsure a virtue?"
+            text = QUESTIONS[(feed.index + n) % len(QUESTIONS)]
             began = time.monotonic()
             reply = await feed.http.post("api/prompts", json={"text": text, "device": feed.device})
             body = reply.json() if reply.content else {}
@@ -311,6 +330,11 @@ class Run:
                 "answers": len(mine),
                 "done": sum(1 for a in mine if a["state"] == "done"),
                 "empty": sum(1 for a in mine if a["state"] == "empty"),
+                # No finish_reason reaches the room, so a done answer that ends off a
+                # sentence mark stands in for one cut off mid-sentence.
+                "cut_off": sum(
+                    1 for a in mine if a["state"] == "done" and not a["text"].rstrip().endswith(ENDS)
+                ),
                 "not_done": reasons,
                 "queue_s": spread([when(a["started_at"]) - at[a["prompt_id"]] for a in timed]),
                 "run_s": spread([when(a["finished_at"]) - when(a["started_at"]) for a in timed]),
@@ -477,6 +501,8 @@ class Run:
         for label, per in record["answers"]["per_subject"].items():
             if per["empty"]:
                 self.findings.append(f"round {n}: {label} gave {per['empty']} empty answers")
+            if per["cut_off"]:
+                self.findings.append(f"round {n}: {label} had {per['cut_off']} answers with no closing mark")
         watcher = self.feeds[0]
         await watcher.until(lambda: watcher.rev >= snap["rev"], self.args.swap_timeout)
         record["fallbacks"] = len(set(ids) & watcher.fallbacks)
