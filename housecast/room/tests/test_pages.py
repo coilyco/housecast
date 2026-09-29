@@ -78,3 +78,13 @@ def test_the_look_back_can_only_read() -> None:
     # The past view is chosen before any grading render, so no grade button is drawn.
     render = html[html.index("function render()") :]
     assert render.index('view === "past"') < render.index("renderGrading(now)")
+
+
+def test_the_results_show_the_four_answers_read_only() -> None:
+    """The room talks about the answers in results, so the phone shows them under the bars."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    start = html.index("function renderSplit")
+    body = html[start : html.index("function render()", start)]
+    assert 'id="split-answers"' in html
+    assert "V.answerCard(room, shown, s, Date.now())" in body  # no grade controls argument
+    assert "data-verdict" not in body
