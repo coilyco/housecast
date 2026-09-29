@@ -21,7 +21,9 @@ that a switch happened and never the model. The event log and the server log car
 ## Restart
 
 Every event is appended before it is applied, and a start replays the log, dropping a torn last
-line. Answers a restart cut off are asked again. The switch is one log event, and replaying it re-queues every answer of that prompt. A restart mid-round
+line. Answers a restart cut off are asked again. An answer that strips to nothing, a subject that tried to
+run a command, is asked once more, and each empty reply's raw text (2048 characters at most) is kept in a
+`raw_empty` log line that takes no rev and reaches no page. The switch is one log event, and replaying it re-queues every answer of that prompt. A restart mid-round
 neither loses the switch nor repeats it. Answers the restart cut off resume on the model the event
 recorded, whatever the restart's own setting says.
 

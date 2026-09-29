@@ -155,6 +155,26 @@ def test_two_markup_only_answers_stay_empty_and_are_not_asked_a_third_time() -> 
     assert len(calls) == 4
 
 
+def test_the_raw_text_of_an_empty_reply_is_logged_and_shown_nowhere(tmp_path: Path) -> None:
+    markup = "<tool_calls>" + "x" * 3000 + "</tool_calls>"
+    transport, _calls = routed(lambda _m, s: markup if s == SUBJECTS[0]["system"] else "ok")
+    log = tmp_path / "room.jsonl"
+    room = Room(subjects=SUBJECTS[:2], log_path=log)
+    asyncio.run(ask(room, transport))
+    lines = [json.loads(line) for line in log.read_text().splitlines()]
+    raws = [e for e in lines if e["kind"] == "raw_empty"]
+    assert [(r["data"]["attempt"], r["data"]["chars"], len(r["data"]["raw"])) for r in raws] == [
+        (1, len(markup), 2048),
+        (2, len(markup), 2048),
+    ]
+    revs = [e["rev"] for e in lines if e["kind"] != "raw_empty"]
+    assert revs == sorted(set(revs)) == list(range(1, len(revs) + 1))  # notes take no rev
+    assert "xxx" not in json.dumps(room.snapshot("presenter"))
+    replayed = Room(subjects=SUBJECTS[:2], log_path=log)
+    replayed.load()  # replay skips the note
+    assert replayed.rev == room.rev and replayed.snapshot("presenter") == room.snapshot("presenter")
+
+
 def test_a_failing_fallback_does_not_switch_again() -> None:
     transport, calls = routed(lambda _m, _s: 500)
     room = Room(subjects=SUBJECTS[:2])

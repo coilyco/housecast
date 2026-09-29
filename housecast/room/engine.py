@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import secrets
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -22,6 +23,7 @@ log = logging.getLogger(__name__)
 MAX_PROMPT = 280
 MAX_COMMITMENT = 140
 RETRY_PAUSE = 2.0
+RAW_KEPT = 2048  # characters of an emptied reply the log keeps, for the operator only
 MAX_REASON = 140
 VERDICTS = frozenset({"pass", "fail"})
 
@@ -105,7 +107,10 @@ class Engine:
             self.room.emit("answer", {**base, "state": "running", "started_at": started})
             try:
                 text = await self._call(
-                    subject["system"], prompt["text"], self._model_for(prompt, subject)
+                    subject["system"],
+                    prompt["text"],
+                    self._model_for(prompt, subject),
+                    self._keep_raw(base),
                 )
             except Exception as failed:  # the room shows it, and the other subjects carry on
                 self.room.emit(
@@ -127,12 +132,25 @@ class Engine:
                 self.room.emit("answer", done)
         await self._maybe_score(prompt)
 
+    def _keep_raw(self, base: dict[str, str]) -> Callable[[int, str], None]:
+        def keep(attempt: int, raw: str) -> None:
+            note = {**base, "attempt": attempt, "chars": len(raw), "raw": raw[:RAW_KEPT]}
+            self.room.note("raw_empty", note)
+
+        return keep
+
     def _model_for(self, prompt: dict[str, Any], subject: dict[str, str]) -> str | None:
         """None is the room's model. A switched round uses the model its event logged."""
         switched = self.room.fallbacks.get(prompt["id"])
         return switched["model"] if switched else subject.get("model")
 
-    async def _call(self, system: str, text: str, model: str | None = None) -> str:
+    async def _call(
+        self,
+        system: str,
+        text: str,
+        model: str | None = None,
+        on_empty: Callable[[int, str], None] | None = None,
+    ) -> str:
         """One answer under the deadline, retried once on a transient proxy error or on
         an answer that strips to nothing, a subject that tried to run a command."""
         loop = asyncio.get_running_loop()
@@ -142,9 +160,12 @@ class Engine:
             if remaining <= 0:
                 raise TimeoutError
             try:
-                answer = await asyncio.wait_for(
-                    models.answer(self.client, self.cfg, system, text, model), timeout=remaining
+                raw = await asyncio.wait_for(
+                    models.complete(self.client, self.cfg, system, text, model), timeout=remaining
                 )
+                answer = models.strip_markup(raw)
+                if not answer and on_empty:
+                    on_empty(attempt, raw)
                 if answer or attempt == 2:
                     return answer
             except (httpx.TransportError, httpx.HTTPStatusError) as err:
