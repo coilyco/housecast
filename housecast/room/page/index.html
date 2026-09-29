@@ -13,6 +13,12 @@
 <p class="banner" id="banner" role="status" hidden></p>
 
 <main class="wrap" id="main">
+  <!-- look-back: appears once a case has a result, and never grades or proposes -->
+  <nav class="tabs" id="tabs" aria-label="Where to look" hidden>
+    <button type="button" id="tab-live" aria-pressed="true">Live</button>
+    <button type="button" id="tab-past" aria-pressed="false">Past cases</button>
+  </nav>
+
   <!-- holding: the only state the room reaches on its own -->
   <section class="panel" id="holding" aria-labelledby="holding-title">
     <p class="eyebrow">Behavioral Divergence Evals</p>
@@ -20,6 +26,19 @@
     <p class="dim">The session hasn't started yet. This page updates on its own.</p>
     <p class="dim">Each case tests one written commitment. You grade four answers against it, PASS or FAIL, and then we talk about where the room disagreed.</p>
     <ul class="cast" id="holding-cast" aria-label="The four agents"></ul>
+  </section>
+
+  <!-- past cases: read only, so it holds no form, no input, and no grade button -->
+  <section class="panel" id="past" aria-labelledby="past-title" hidden>
+    <div class="livebar" id="past-live" role="status">
+      <span id="past-live-text"></span>
+      <button type="button" id="past-back">Back to Live</button>
+    </div>
+    <h1 id="past-title">Past cases</h1>
+    <p class="dim">You can read past cases here. Grading and proposing stay in Live.</p>
+    <h2 class="closing__sub">The eval so far</h2>
+    <div id="past-eval"></div>
+    <div id="past-list"></div>
   </section>
 
   <!-- proposals: anyone can propose a test case and name the commitment it probes -->
@@ -109,9 +128,46 @@ function saveGrades() {
   try { localStorage.setItem("room-grades", JSON.stringify({ prompt: room.round.prompt_id, grades: kept })); } catch {}
 }
 
+// The look-back is a view of what already happened. The live phase stays the presenter's.
+let view = "live";
+const openCases = new Set();
+
+function liveText() {
+  const n = room.round.n;
+  const last = room.rounds[room.rounds.length - 1];
+  if (room.phase === "grading") return `Case ${n} is open for grading.`;
+  if (room.phase === "submissions") return "Live now: proposals open";
+  if (room.phase === "split") return `Live now: case ${last?.n ?? n} results`;
+  if (room.phase === "closing") return "Live now: revising the agents";
+  return "Live now: waiting for the session";
+}
+
+function pastCase(r, now) {
+  const prompt = promptById(room, r.prompt_id);
+  const answers = room.subjects.map((s) => V.answerCard(room, r.prompt_id, s, now)).join("");
+  const title = `case ${r.n}${prompt?.commitment ? `: ${escapeHtml(prompt.commitment)}` : ""}`;
+  return `<details class="past" data-n="${r.n}"${openCases.has(String(r.n)) ? " open" : ""}>
+    <summary>${title}</summary>
+    ${V.caseCard(prompt)}
+    <h3>The four answers</h3>
+    <div class="answers">${answers}</div>
+    <h3>How the room graded it</h3>
+    <div class="split">${V.split(room, r.n, { tall: 8 }) ?? ""}</div>
+  </details>`;
+}
+
+function renderPast(now) {
+  $("past-live-text").textContent = liveText();
+  $("past-live").dataset.attention = room.phase === "grading" || room.phase === "submissions" ? "true" : "";
+  V.setHtml($("past-eval"), V.evalTable(room));
+  const done = room.rounds.filter((r) => r.split).sort((a, b) => b.n - a.n);
+  V.setHtml($("past-list"), done.length ? done.map((r) => pastCase(r, now)).join("") : `<p class="dim">No case has a result yet.</p>`);
+}
+
 function show(phase) {
-  for (const id of ["holding", "submissions", "mine", "grading", "split", "closing"]) $(id).hidden = true;
-  if (phase === "submissions") $("submissions").hidden = $("mine").hidden = false;
+  for (const id of ["holding", "submissions", "mine", "grading", "split", "closing", "past"]) $(id).hidden = true;
+  if (view === "past") $("past").hidden = false;
+  else if (phase === "submissions") $("submissions").hidden = $("mine").hidden = false;
   else ($(phase) ?? $("holding")).hidden = false;
 }
 
@@ -200,8 +256,14 @@ function render() {
   if (!room) return;
   const now = Date.now();
   V.setHtml($("holding-cast"), V.cast(room, { full: true }));
+  const canLook = room.rounds.some((r) => r.split);
+  if (!canLook) view = "live";
+  $("tabs").hidden = !canLook;
+  $("tab-live").setAttribute("aria-pressed", String(view === "live"));
+  $("tab-past").setAttribute("aria-pressed", String(view === "past"));
   show(room.phase);
-  if (room.phase === "submissions") renderSubmissions();
+  if (view === "past") renderPast(now);
+  else if (room.phase === "submissions") renderSubmissions();
   else if (room.phase === "grading") renderGrading(now);
   else if (room.phase === "split") renderSplit();
   else if (room.phase === "closing") renderClosing();
@@ -318,6 +380,21 @@ $("grade-answers").addEventListener("input", (event) => {
   // A reason re-sends the grade once typing pauses, since a re-grade replaces.
   reasonTimers[id] = setTimeout(() => { if (grades[id]) void sendGrade(id); }, 900);
 });
+
+function goTo(next) {
+  view = next;
+  render();
+  window.scrollTo(0, 0);
+}
+$("tab-live").addEventListener("click", () => goTo("live"));
+$("tab-past").addEventListener("click", () => goTo("past"));
+$("past-back").addEventListener("click", () => goTo("live"));
+$("past-list").addEventListener("toggle", (event) => {
+  const n = event.target.dataset?.n;
+  if (!n) return;
+  if (event.target.open) openCases.add(n);
+  else openCases.delete(n);
+}, true);
 
 demo = window.Room.connect(
   (next) => { room = next; render(); },

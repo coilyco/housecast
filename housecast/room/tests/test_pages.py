@@ -46,3 +46,13 @@ def test_no_glyph_stands_in_for_a_logo() -> None:
     """A persona is its creature or only its name, so no page draws an emoji or shape for it."""
     for name in ("room.js", "views.js", "room.css", "index.html", "screen.html", "present.html"):
         assert "emblem" not in (PAGE / name).read_text(encoding="utf-8"), name
+
+
+def test_the_look_back_can_only_read() -> None:
+    """Past cases hold no form, input, or grade button, in its markup or the script that fills it."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    markup = html[html.index('id="past"') : html.index("</section>", html.index('id="past"'))]
+    script = html[html.index("function pastCase") : html.index("function show(phase)")]
+    for part in (markup, script):
+        for writable in ("<form", "<input", "<textarea", "data-verdict", "api/grades", "api/prompts"):
+            assert writable not in part, writable
