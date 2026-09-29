@@ -115,3 +115,13 @@ OPENING_LINE = (
 def test_the_screen_opens_on_kais_cover_line() -> None:
     html = (PAGE / "screen.html").read_text(encoding="utf-8")
     assert f'<p class="dim">{OPENING_LINE}</p>' in html
+
+
+def test_the_screen_shows_the_machine_measurement_apart_from_the_bars() -> None:
+    """Jev's split sits under the results, labelled a measurement, with the backup marked."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "Machine measurement, not a grade" in views
+    assert "by word overlap" in views and "Jev did not answer" in views
+    assert 'id="measure"' in screen and "V.measure(room, last.prompt_id)" in screen
+    assert "measure" not in views[views.index("function split(") : views.index("function measure(")]

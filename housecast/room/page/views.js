@@ -107,6 +107,27 @@ function split(room, n, { tall = 16 } = {}) {
     .join("");
 }
 
+/** Jev's divergence for a prompt, boxed apart from the bars. "" when unasked. */
+function measure(room, promptId) {
+  const d = room.divergence[promptId];
+  if (!d) return "";
+  let line = "Jev is measuring…";
+  let note = "";
+  if (d.state === "done") {
+    const backup = d.method === "lexical";
+    line = backup ? `split ${d.score.toFixed(2)}* by word overlap` : `Jev: split ${d.score.toFixed(2)} by stance`;
+    note = backup ? "* Jev did not answer. The backup word-overlap scorer reads looser than Jev." : "";
+  } else if (d.state === "failed") {
+    line = "No measurement this round";
+    note = d.reason ? escapeHtml(d.reason) : "";
+  }
+  return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade">
+    <p class="measure__tag">Machine measurement, not a grade</p>
+    <p class="measure__line">${line}</p>
+    ${note ? `<p class="measure__note">${note}</p>` : ""}
+  </aside>`;
+}
+
 /** Every case with a result, by agent. On a phone each row reads as a card. */
 function evalTable(room) {
   const rows = evalRows(room);
@@ -158,5 +179,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, caseCard, split, evalTable, talkCard, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, caseCard, split, measure, evalTable, talkCard, failures, setHtml, subjectById };
 })();

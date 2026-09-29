@@ -213,7 +213,13 @@ p { margin: 0; }
 .screen #main h1[data-len="l"] { font-size: 1.9rem; }
 .screen #main h1[data-len="xl"] { font-size: 1.5rem; }
 .screen #main[data-phase="split"] h1, .screen #main[data-phase="grading"] h1 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-.screen .split { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+/* A machine reading, boxed and dashed so it never sits among the graded bars. */
+.measure { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.1rem 1rem; padding: 0.35rem 1rem; border: 1px dashed var(--dim); border-radius: 10px; text-align: center; }
+#measure:empty { display: none; }
+.measure__tag { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.measure__line { font-family: var(--mono); font-size: clamp(1rem, 2.6vmin, 1.5rem); color: var(--focus); }
+.measure__note { flex-basis: 100%; font-size: 0.85rem; color: var(--dim); }
+.screen .split { flex: 1; min-height: 12.5rem; grid-auto-rows: minmax(0, 1fr); }
 .screen .split__col { min-height: 0; height: 100%; gap: 0.3rem; }
 .screen .split__track { flex: 1; min-height: 2rem; height: auto; width: min(100%, 14rem); }
 .screen .split__share { font-size: clamp(1.8rem, 5.5vmin, 3rem); }
