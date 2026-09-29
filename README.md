@@ -39,15 +39,19 @@ distribution. `house-cast` is held defensively and never shipped.
 git clone https://github.com/coilyco/housecast.git
 cd housecast
 uv sync --extra room
+export ROOM_PROXY=http://localhost:11434   # your endpoint's base URL, no /v1
+export ROOM_MODEL=llama3.2                 # a model that endpoint serves
 uv run --extra room housecast room serve \
   --subjects examples/two-agents/subjects.json --log /tmp/room.jsonl
 ```
 
-That serves the live room on port 8767 with two example agents, against any
-OpenAI-compatible endpoint you name. [`docs/room.md`](docs/room.md) covers the
-endpoint, key, and model settings, and [`examples/`](examples/README.md) has the
-steps. `just` with no arguments lists the dev verbs, and `just check` is the
-offline gate: lint, format check, types, and tests in one recipe.
+That serves the live room on port 8767 with two example agents. Set the two
+variables first: without them the room calls the author's own endpoint, and
+every answer shows as failed. A hosted endpoint also needs `ROOM_PROXY_KEY`.
+[`docs/room.md`](docs/room.md) covers the endpoint, key, and model settings,
+and [`examples/`](examples/README.md) has the steps. `just` with no arguments
+lists the dev verbs, and `just check` is the offline gate: lint, format check,
+types, and tests in one recipe.
 
 ## Installing it elsewhere
 
