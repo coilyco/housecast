@@ -28,6 +28,8 @@ _MARKUP = [
         f"<{_BAR}tool{_SEP}calls{_SEP}begin{_BAR}>.*?<{_BAR}tool{_SEP}calls{_SEP}end{_BAR}>", re.S
     ),
     re.compile(r"<(?:antml:)?invoke\b.*?</(?:antml:)?invoke>", re.S),
+    # DeepSeek's DSML fence: doubled bars, a spaced `calls`, possibly never closed.
+    re.compile(f"<{_BAR}+DSML{_BAR}+ *(\\w*calls)>.*?(?:</{_BAR}+DSML{_BAR}+ *\\1>|\\Z)", re.S),
 ]
 
 
