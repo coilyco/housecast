@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 from fastapi.testclient import TestClient
 
-from housecast.room.engine import MAX_COMMITMENT
+from housecast.room.engine import MAX_CASE, MAX_COMMITMENT, MAX_PROMPT
 from housecast.room.server import create_app
 from housecast.room.store import Room
 from housecast.room.tests.serving import TOKEN, Served, free_port, stub
@@ -85,8 +85,9 @@ def test_case_round_trip_and_validation() -> None:
         assert made.status_code == 201 and made.json().keys() == {"id", "seq"}
         empty = tc.post(CASES, json={"text": " ", "commitment": "c"}, headers=HEADERS)
         assert empty.status_code == 422 and empty.json() == {"reason": "the prompt is empty"}
-        long_text = tc.post(CASES, json={"text": "x" * 281}, headers=HEADERS)
-        assert long_text.status_code == 422 and "280" in long_text.json()["reason"]
+        long_text = tc.post(CASES, json={"text": "x" * (MAX_CASE + 1)}, headers=HEADERS)
+        assert long_text.status_code == 422
+        assert long_text.json() == {"reason": "the prompt is over 2000 characters"}
         long_commit = tc.post(CASES, json={"text": "ok", "commitment": "y" * 141}, headers=HEADERS)
         assert long_commit.json() == {"reason": "the commitment is over 140 characters"}
         bare = tc.post(CASES, json={"text": "no commitment"}, headers=HEADERS)
@@ -203,6 +204,56 @@ def test_a_log_from_before_commitments_replays_as_an_attendee_prompt(tmp_path: P
         "commitment": "",
         "source": "attendee",
     }
+
+
+def capturing() -> tuple[httpx.MockTransport, list[str], list[str]]:
+    asked: list[str] = []  # the user message each subject was sent
+    scored: list[str] = []  # the prompt Jev was given
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path == "/v1/systemone":
+            scored.append(body["state"]["prompt"])
+            return httpx.Response(200, json={"answers": {"divergence": {"score": 2.0}}})
+        asked.append(body["messages"][1]["content"])
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    return httpx.MockTransport(handle), asked, scored
+
+
+def test_a_prepared_case_takes_2000_characters_and_every_newline(tmp_path: Path) -> None:
+    text = "\n".join(f"line {i:02d} " + "x" * 110 for i in range(15))  # 15 lines, about 1800
+    assert 1700 < len(text) <= MAX_CASE and text.count("\n") == 14
+    transport, asked, scored = capturing()
+    log = tmp_path / "room.jsonl"
+    room = Room(subjects=SUBJECTS, log_path=log)
+    app = create_app(room, CFG, "tok", client=httpx.AsyncClient(transport=transport), page=None)
+    with TestClient(app) as tc:
+        made = tc.post(CASES, json={"text": text}, headers=HEADERS)
+        edge = tc.post(CASES, json={"text": "y" * MAX_CASE}, headers=HEADERS)
+        under = tc.post(CASES, json={"text": "z" * (MAX_CASE - 1)}, headers=HEADERS)
+        over = tc.post(CASES, json={"text": "w" * (MAX_CASE + 1)}, headers=HEADERS)
+        snap = tc.get("/api/control/room", headers=HEADERS).json()
+    assert (made.status_code, edge.status_code, under.status_code) == (201, 201, 201)
+    assert over.status_code == 422
+    assert over.json() == {"reason": "the prompt is over 2000 characters"}
+    assert snap["prompts"][0]["text"] == text  # the snapshot keeps all 15 lines
+    assert sum(t.startswith(text) for t in asked) == len(SUBJECTS)  # every subject got them
+    assert text in scored  # and so did Jev
+    again = Room(subjects=SUBJECTS, log_path=log)
+    again.load()
+    assert again.prompts[0]["text"] == text  # a restart replays them unchanged
+
+
+def test_an_attendee_prompt_is_still_capped_at_280() -> None:
+    tc, room = client()
+    with tc:
+        open_room(tc)
+        ok = tc.post("/api/prompts", json={"text": "x" * MAX_PROMPT, "device": "1"})
+        over = tc.post("/api/prompts", json={"text": "x" * (MAX_PROMPT + 1), "device": "2"})
+    assert ok.status_code == 201 and over.status_code == 422
+    assert over.json() == {"reason": "the prompt is over 280 characters"}
+    assert len(room.prompts) == 1
 
 
 def test_a_new_prompt_survives_a_restart_with_commitment_and_source(tmp_path: Path) -> None:

@@ -22,6 +22,7 @@ from housecast.room.store import PHASES, TERMINAL, Room, now
 log = logging.getLogger(__name__)
 
 MAX_PROMPT = 280
+MAX_CASE = 2000  # a presenter-prepared case may carry pasted context
 MAX_COMMITMENT = 140
 RETRY_PAUSE = 2.0
 RAW_KEPT = 2048  # characters of an emptied reply the log keeps, for the operator only
@@ -60,12 +61,12 @@ class Engine:
         return self._clean(text)
 
     @staticmethod
-    def _clean(text: str) -> str:
-        text = text.strip()
+    def _clean(text: str, limit: int = MAX_PROMPT) -> str:
+        text = text.strip()  # inner newlines stay, a case may be several lines
         if not text:
             raise PromptRefusedError("the prompt is empty")
-        if len(text) > MAX_PROMPT:
-            raise PromptRefusedError(f"the prompt is over {MAX_PROMPT} characters")
+        if len(text) > limit:
+            raise PromptRefusedError(f"the prompt is over {limit} characters")
         return text
 
     @staticmethod
@@ -81,7 +82,8 @@ class Engine:
 
     def prepare(self, text: str, commitment: str | None = None) -> dict[str, Any]:
         """A presenter case, taken in any phase. It fans out like an attendee prompt."""
-        return self._open(self._clean(text), self.check_commitment(commitment), "prepared")
+        text = self._clean(text, MAX_CASE)
+        return self._open(text, self.check_commitment(commitment), "prepared")
 
     def _open(self, text: str, commitment: str, source: str) -> dict[str, Any]:
         prompt = {
