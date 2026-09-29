@@ -46,7 +46,7 @@ function stateOf(answer, now) {
     case "empty":
       return { text: "∅ no answer", tone: "trouble" };
     case "failed":
-      return { text: "✕ failed", tone: "trouble" };
+      return { text: "∅ no answer", tone: "trouble" };
     default:
       return { text: answer.state };
   }
@@ -119,7 +119,7 @@ function evalTable(room) {
   const body = rows
     .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}${r.prompt?.commitment ? `: ${escapeHtml(r.prompt.commitment)}` : ""}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
     .join("");
-  return `<table class="eval"><caption class="sr-only">Every case, with each agent's majority verdict and its share</caption><thead><tr><th scope="col">case</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
+  return `<table class="eval"><caption class="sr-only">Every case, with the grade most of the room gave each agent and its share</caption><thead><tr><th scope="col">case</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
 /** Questions for the room after the latest result. */
