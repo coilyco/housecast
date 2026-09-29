@@ -23,8 +23,7 @@
   <section class="panel" id="holding" aria-labelledby="holding-title">
     <p class="eyebrow">Behavioral Divergence Evals</p>
     <h1 id="holding-title">Waiting on the presenter</h1>
-    <p class="dim">The session hasn't started yet. This page updates on its own.</p>
-    <p class="dim">Each case tests one written commitment. You grade four answers against it, PASS or FAIL, and then we talk about where the room disagreed.</p>
+    <p class="dim hint">The session hasn't started yet. This page updates on its own.</p>
     <ul class="cast" id="holding-cast" aria-label="The four agents"></ul>
   </section>
 
@@ -35,23 +34,20 @@
       <button type="button" id="past-back">Back to Live</button>
     </div>
     <h1 id="past-title">Past cases</h1>
-    <p class="dim">You can read past cases here. Grading and proposing stay in Live.</p>
+    <p class="dim hint">You can read past cases here. Grading and proposing stay in Live.</p>
     <h2 class="closing__sub">The eval so far</h2>
     <div id="past-eval"></div>
     <div id="past-list"></div>
   </section>
 
-  <!-- proposals: anyone can propose a test case and name the commitment it probes -->
+  <!-- proposals: hidden unless SHOW_PROPOSALS, since Kai takes prompts from Zoom chat -->
   <section class="panel panel--open" id="submissions" aria-labelledby="submit-title" hidden>
     <p class="eyebrow eyebrow--open" id="submit-eyebrow">proposals open</p>
     <h1 id="submit-title">Propose a test case</h1>
     <form class="field" id="submit-form" novalidate>
-      <label for="submit-text" class="dim">Write a prompt that tests one agent's commitment. All four answer it.</label>
+      <label for="submit-text" class="dim">Write a prompt. All four agents answer it.</label>
       <textarea id="submit-text" name="text" maxlength="400" autocomplete="off" required></textarea>
-      <div class="field__meta"><span></span><span id="submit-count"></span></div>
-      <label for="submit-commitment" class="dim">Which commitment does it test?</label>
-      <input id="submit-commitment" name="commitment" type="text" maxlength="140" autocomplete="off" required>
-      <div class="field__meta"><span id="submit-hint">Kai promotes some proposals to the next case.</span><span id="submit-ccount"></span></div>
+      <div class="field__meta"><span id="submit-hint">Kai promotes some proposals to the next case.</span><span id="submit-count"></span></div>
       <button class="send" id="submit-send" type="submit">PROPOSE</button>
     </form>
     <p class="note" id="submit-note" role="status" hidden></p>
@@ -64,20 +60,18 @@
   <!-- grading: the case, four answers, PASS or FAIL on each -->
   <section class="panel" id="grading" aria-labelledby="grade-title" hidden>
     <p class="eyebrow" id="grade-eyebrow"></p>
-    <h1 id="grade-title">Grade all four against this case</h1>
+    <h1 id="grade-title">Grade</h1>
     <div id="grade-case"></div>
-    <p id="grade-criterion"></p>
-    <p class="dim" id="grade-fail-rule"></p>
     <div class="answers" id="grade-answers"></div>
-    <p class="dim" id="grade-count" aria-live="polite"></p>
+    <p class="dim hint" id="grade-count" aria-live="polite"></p>
   </section>
 
   <!-- results: each agent's PASS share of the room, and how many graders agreed -->
   <section class="panel" id="split" aria-labelledby="split-title" hidden>
     <p class="eyebrow" id="split-eyebrow"></p>
-    <h1 id="split-title">How the room graded this case</h1>
+    <h1 id="split-title">Results</h1>
     <div id="split-case"></div>
-    <p class="dim">For each agent, the share of the room that graded PASS, and how many graders agreed.</p>
+    <p class="dim hint">For each agent, the share of the room that graded PASS, and how many graders agreed.</p>
     <div class="split" id="split-bars"></div>
     <h2 class="closing__sub">The four answers</h2>
     <div class="answers" id="split-answers"></div>
@@ -87,7 +81,7 @@
   <section class="panel panel--closing" id="closing" aria-labelledby="closing-title" hidden>
     <p class="eyebrow eyebrow--closing">the eval, this session</p>
     <h1 id="closing-title">Now change the compositions</h1>
-    <p class="dim">Each failing case traces back to a line in an agent's composition. Which line, and what would you change?</p>
+    <p class="dim hint">Each failing case traces back to a line in an agent's composition. Which line, and what would you change?</p>
     <div id="closing-eval"></div>
     <h2 class="closing__sub" id="closing-broke-title" hidden>What broke, in the room's words</h2>
     <ul class="failures" id="closing-list"></ul>
@@ -102,7 +96,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { promptById, device, postJson, escapeHtml, seconds, PROMPT_MAX, REASON_MAX, COMMITMENT_MAX, RUBRIC, RUBRIC_FAIL } = window.Room;
+const { promptById, device, postJson, escapeHtml, seconds, PROMPT_MAX, REASON_MAX, SHOW_PROPOSALS } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -134,22 +128,27 @@ function saveGrades() {
 let view = "live";
 const openCases = new Set();
 
+/** With proposals hidden, an open submissions phase reads as waiting. */
+function phaseNow() {
+  return room.phase === "submissions" && !SHOW_PROPOSALS ? "holding" : room.phase;
+}
+
 function liveText() {
   const n = room.round.n;
   const last = room.rounds[room.rounds.length - 1];
-  if (room.phase === "grading") return `Case ${n} is open for grading.`;
-  if (room.phase === "submissions") return "Live now: proposals open";
-  if (room.phase === "split") return `Live now: case ${last?.n ?? n} results`;
-  if (room.phase === "closing") return "Live now: revising the agents";
+  const phase = phaseNow();
+  if (phase === "grading") return `Case ${n} is open for grading.`;
+  if (phase === "submissions") return "Live now: proposals open";
+  if (phase === "split") return `Live now: case ${last?.n ?? n} results`;
+  if (phase === "closing") return "Live now: revising the agents";
   return "Live now: waiting for the session";
 }
 
 function pastCase(r, now) {
   const prompt = promptById(room, r.prompt_id);
   const answers = room.subjects.map((s) => V.answerCard(room, r.prompt_id, s, now)).join("");
-  const title = `case ${r.n}${prompt?.commitment ? `: ${escapeHtml(prompt.commitment)}` : ""}`;
   return `<details class="past" data-n="${r.n}">
-    <summary>${title}</summary>
+    <summary>case ${r.n}</summary>
     ${V.caseCard(prompt)}
     <h3>The four answers</h3>
     <div class="answers">${answers}</div>
@@ -161,7 +160,7 @@ function pastCase(r, now) {
 function renderPast(now) {
   const said = liveText();
   if ($("past-live-text").textContent !== said) $("past-live-text").textContent = said;
-  $("past-live").dataset.attention = room.phase === "grading" || room.phase === "submissions" ? "true" : "";
+  $("past-live").dataset.attention = ["grading", "submissions"].includes(phaseNow()) ? "true" : "";
   V.setHtml($("past-eval"), V.evalTable(room));
   const done = room.rounds.filter((r) => r.split).sort((a, b) => b.n - a.n);
   V.setHtml($("past-list"), done.length ? done.map((r) => pastCase(r, now)).join("") : `<p class="dim">No case has a result yet.</p>`);
@@ -184,13 +183,10 @@ function renderSubmissions() {
         return `<li>${escapeHtml(p.text)}${ran ? ` <span class="dim">(promoted to case ${ran.n})</span>` : ""}</li>`;
       }).join("")
     : `<li class="dim">Nothing yet. Proposals you send appear here.</li>`);
-  const first = room.subjects[0];
-  const said = (first?.line ?? "").split(". ").pop().replace(/\.$/, "");
-  $("submit-commitment").placeholder = first && said ? `e.g. ${first.label}: ${said}` : "";
 }
 
 function savedText(g) {
-  return g.status === "saving" ? "Saving." : g.status === "saved" ? "Saved. You can change it until the split." : g.status ?? "";
+  return g.status === "saving" ? "Saving." : g.status === "saved" ? "Saved." : g.status ?? "";
 }
 
 /** A card is not redrawn while its reason is being typed, so its status is set in place. */
@@ -207,7 +203,7 @@ function gradeControls(subject) {
   const pressed = (v) => (mineNow.verdict === v ? "true" : "false");
   const reason = mineNow.verdict === "fail"
     ? `<div class="reason">
-        <label for="reason-${escapeHtml(subject.id)}" class="dim">What broke, in one line? Optional. It goes in the eval table at the end.</label>
+        <label for="reason-${escapeHtml(subject.id)}" class="dim">What broke, in one line? Optional.<span class="hint"> It goes in the eval table at the end.</span></label>
         <textarea id="reason-${escapeHtml(subject.id)}" data-reason="${escapeHtml(subject.id)}" maxlength="${REASON_MAX}">${escapeHtml(mineNow.reason ?? "")}</textarea>
       </div>`
     : "";
@@ -230,8 +226,6 @@ function renderGrading(now) {
   const prompt = promptById(room, room.round.prompt_id);
   $("grade-eyebrow").textContent = `case ${room.round.n} // grade`;
   V.setHtml($("grade-case"), V.caseCard(prompt));
-  $("grade-criterion").textContent = RUBRIC;
-  $("grade-fail-rule").textContent = RUBRIC_FAIL;
   // A redraw while someone types a reason would drop their cursor, so it waits.
   const typing = document.activeElement?.tagName === "TEXTAREA" && $("grade-answers").contains(document.activeElement);
   const held = document.activeElement?.dataset?.verdict ? `button[data-subject="${CSS.escape(document.activeElement.dataset.subject)}"][data-verdict="${CSS.escape(document.activeElement.dataset.verdict)}"]` : null;
@@ -247,7 +241,7 @@ function renderSplit() {
   $("split-eyebrow").textContent = `case ${last?.n ?? room.round.n} // results`;
   V.setHtml($("split-case"), V.caseCard(prompt));
   const bars = last ? V.split(room, last.n, { tall: 12 }) : null;
-  V.setHtml($("split-bars"), bars ?? `<p class="dim">The results show as soon as the presenter closes grading.</p>`);
+  V.setHtml($("split-bars"), bars ?? `<p class="dim hint">The results show as soon as the presenter closes grading.</p>`);
   // The room talks about the answers here, so they are read-only under the bars, as in Past cases.
   const shown = last?.prompt_id ?? room.round.prompt_id;
   V.setHtml($("split-answers"), room.subjects.map((s) => V.answerCard(room, shown, s, Date.now())).join(""));
@@ -268,12 +262,13 @@ function render() {
   $("tabs").hidden = !canLook;
   $("tab-live").setAttribute("aria-pressed", String(view === "live"));
   $("tab-past").setAttribute("aria-pressed", String(view === "past"));
-  show(room.phase);
+  const phase = phaseNow();
+  show(phase);
   if (view === "past") renderPast(now);
-  else if (room.phase === "submissions") renderSubmissions();
-  else if (room.phase === "grading") renderGrading(now);
-  else if (room.phase === "split") renderSplit();
-  else if (room.phase === "closing") renderClosing();
+  else if (phase === "submissions") renderSubmissions();
+  else if (phase === "grading") renderGrading(now);
+  else if (phase === "split") renderSplit();
+  else if (phase === "closing") renderClosing();
 }
 
 function renderLink() {
@@ -288,14 +283,9 @@ function updateCount() {
   const count = $("submit-count");
   count.textContent = length > PROMPT_MAX ? `${length} / ${PROMPT_MAX}. Shorten it by ${length - PROMPT_MAX}.` : `${length} / ${PROMPT_MAX}`;
   count.dataset.over = String(length > PROMPT_MAX);
-  const clength = $("submit-commitment").value.trim().length;
-  const ccount = $("submit-ccount");
-  ccount.textContent = clength > COMMITMENT_MAX ? `${clength} / ${COMMITMENT_MAX}. Shorten it by ${clength - COMMITMENT_MAX}.` : `${clength} / ${COMMITMENT_MAX}`;
-  ccount.dataset.over = String(clength > COMMITMENT_MAX);
-  $("submit-send").disabled = length === 0 || length > PROMPT_MAX || clength === 0 || clength > COMMITMENT_MAX;
+  $("submit-send").disabled = length === 0 || length > PROMPT_MAX;
 }
 $("submit-text").addEventListener("input", updateCount);
-$("submit-commitment").addEventListener("input", updateCount);
 updateCount();
 
 function note(text, tone) {
@@ -308,16 +298,14 @@ function note(text, tone) {
 $("submit-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const text = $("submit-text").value.trim();
-  const commitment = $("submit-commitment").value.trim();
-  if (!text || text.length > PROMPT_MAX || !commitment || commitment.length > COMMITMENT_MAX) return;
+  if (!text || text.length > PROMPT_MAX) return;
   $("submit-send").disabled = true;
   note("Sending.", "");
-  const result = demo ? { ok: true, body: { id: `demo-${Date.now()}` } } : await postJson("api/prompts", { text, commitment, device: device() }, {}, 1);
+  const result = demo ? { ok: true, body: { id: `demo-${Date.now()}` } } : await postJson("api/prompts", { text, device: device() }, {}, 1);
   if (result.ok) {
     mine.add(result.body.id);
     try { sessionStorage.setItem("room-mine", JSON.stringify([...mine])); } catch {}
     $("submit-text").value = "";
-    $("submit-commitment").value = "";
     note("Proposed. You can send another in 20 seconds.", "ok");
     render();
   } else {

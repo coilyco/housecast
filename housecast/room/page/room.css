@@ -127,9 +127,6 @@ p { margin: 0; }
 .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 0.9rem; }
 .answer { background: var(--card); border-top: 6px solid var(--c); border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.7rem; min-width: 0; }
 .answer__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.2rem 0.8rem; }
-/* The rubric stays at the top of the phone while four answers scroll under it. */
-#grade-criterion { position: sticky; top: 0; z-index: 2; margin: 0; padding: 0.6rem 0; background: var(--deep); border-bottom: 1px solid var(--line); font-weight: 600; color: var(--pass); }
-.rubric { font-size: 1.25rem; font-weight: 600; color: var(--pass); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .answer__about { display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.9rem; color: var(--soft); }
 .answer__about b { font-weight: 600; }
@@ -250,20 +247,12 @@ p { margin: 0; }
 .case__label { font-family: var(--mono); font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .case__text { color: var(--soft); overflow-wrap: anywhere; }
 .case__from { font-size: 0.85rem; color: var(--dim); }
-#case-tests .case { padding: 0; background: none; border: 0; }
-.screen #case-tests .case__tests { font-size: 1.3rem; color: var(--closing); }
 .field input[type="text"] { min-height: 2.8rem; padding: 0 0.9rem; border-radius: 12px; border: 1px dashed #3d4856; background: #1a1f26; font-size: 1.05rem; }
 .mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .mine li { padding: 0.6rem 0.8rem; border-radius: 10px; background: var(--card); overflow-wrap: anywhere; }
 .split__agree { font-size: 0.85rem; color: var(--soft); }
 .closing__sub { font-size: 1.1rem; }
 
-/* -------------------------------------------------------- talk it through */
-.talk { padding: 0.9rem 1.2rem; border-radius: 14px; background: var(--card); border-left: 6px solid var(--closing); }
-.talk h2 { margin: 0 0 0.4rem; font-size: 1.15rem; color: var(--closing); }
-.talk ul { margin: 0; padding-left: 1.2rem; columns: 3 16rem; column-gap: 1.8rem; color: var(--soft); }
-.talk li { break-inside: avoid; margin-bottom: 0.25rem; }
-.screen .talk { flex: none; }
 
 /* ------------------------------------------------------------ the eval */
 .eval { width: 100%; border-collapse: collapse; font-size: 0.95rem; table-layout: fixed; }
@@ -307,3 +296,6 @@ p { margin: 0; }
 .past > * + * { margin-top: 0.7rem; }
 .past summary { cursor: pointer; padding: 0.5rem 0; min-height: 2.75rem; font-weight: 600; overflow-wrap: anywhere; }
 .past h3 { margin: 0; font-size: 1rem; color: var(--dim); }
+
+/* Kai says the instructions aloud. SHOW_HINTS in room.js brings them back. */
+html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { display: none; }
