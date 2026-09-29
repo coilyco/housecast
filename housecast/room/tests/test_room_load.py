@@ -175,6 +175,30 @@ def test_the_split_allows_only_the_outside_grades_it_was_told_about() -> None:
     assert not check(1)[0]["totals_match"]  # a harness grade went missing
 
 
+def test_prompts_are_plain_questions_and_unmarked_answers_are_counted(tmp_path: Path) -> None:
+    served = Served(tmp_path / "room.jsonl", free_port(), stub()).start()
+    try:
+        code = _load().main(argv(served, tmp_path, "--rounds", "1", "--clients", "4"))
+        texts = {p["text"] for p in httpx.get(f"{served.base}/api/room").json()["prompts"]}
+    finally:
+        served.stop()
+    result = report(tmp_path)
+    assert code == 0 and texts <= set(_load().QUESTIONS) and len(texts) == 4
+    per = result["rounds"][0]["answers"]["per_subject"]
+    assert all(row["cut_off"] == 4 for row in per.values())  # the stub sets no closing mark
+    assert "round 1: Amber had 4 answers with no closing mark" in result["findings"]
+
+
+def test_answers_that_close_a_sentence_are_not_counted_as_cut_off(tmp_path: Path) -> None:
+    served = Served(tmp_path / "room.jsonl", free_port(), stub(end=".")).start()
+    try:
+        _load().main(argv(served, tmp_path, "--rounds", "1", "--clients", "4"))
+    finally:
+        served.stop()
+    per = report(tmp_path)["rounds"][0]["answers"]["per_subject"]
+    assert all(row["cut_off"] == 0 for row in per.values())
+
+
 def test_the_token_file_must_be_private(tmp_path: Path) -> None:
     module = _load()
     path = tmp_path / "token"
