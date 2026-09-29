@@ -2,14 +2,14 @@
 // same on a phone, the shared screen, and the presenter's surface.
 (() => {
 "use strict";
-const { answerFor, lookOf, seconds, escapeHtml, leaderboard, splitFor, TYPICAL_S, SLOW_S } = window.Room;
+const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, talkFor, TYPICAL_S, SLOW_S } = window.Room;
 
 function who(room, subject) {
   const look = lookOf(room, subject);
   // The logo is decorative: the name beside it is what is announced.
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
-    : `<span class="emblem" aria-hidden="true">${escapeHtml(look.emblem)}</span>`;
+    : "";
   return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
 }
 
@@ -72,22 +72,20 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   </article>`;
 }
 
-/** The leaderboard. `withText` false keeps unpicked prompt text off a recorded screen. */
-function board(room, { withText = true, mine = new Set(), limit = Infinity } = {}) {
-  const rows = leaderboard(room).slice(0, limit);
-  if (!rows.length) return `<li class="dim">Nothing scored yet. A prompt lands here once all four have answered it.</li>`;
-  return rows
-    .map((row, i) => `<li${mine.has(row.prompt.id) ? ' data-mine="true"' : ""}>
-      <span class="board__rank">${i + 1}</span>
-      <span class="board__text">${withText ? escapeHtml(row.prompt.text) : `Prompt ${row.prompt.seq}`}${mine.has(row.prompt.id) ? ' <span class="dim">(yours)</span>' : ""}</span>
-      <span class="board__score">${row.divergence.score.toFixed(2)}${row.divergence.method === "lexical" ? "*" : ""}</span>
-      <span class="meter" aria-hidden="true"><span style="width:${Math.round(row.divergence.score * 100)}%"></span></span>
-    </li>`)
-    .join("");
+/** The case being graded: the commitment it tests, then the prompt. */
+function caseCard(prompt, { withText = true } = {}) {
+  if (!prompt) return "";
+  const tests = prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
+  const text = withText && prompt.text ? `<p class="case__text">${escapeHtml(prompt.text)}</p>` : "";
+  const from = prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
+  return `<div class="case">${tests}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
 }
 
-function lexicalNote(room) {
-  return leaderboard(room).some((row) => row.divergence.method === "lexical") ? "* Scored by word overlap, a rougher measure than the usual one." : "";
+/** How many graders gave the majority verdict, said as a count, not a percent. */
+function agreedText(cell) {
+  const a = agreement(cell);
+  if (!a.graded) return "no grades";
+  return a.verdict === "tied" ? `no majority, ${cell.pass} to ${cell.fail}` : `${a.agreed} of ${a.graded} graders agreed on ${a.verdict.toUpperCase()}`;
 }
 
 /** Each subject's PASS share for round `n`, as bars. Null before the split exists. */
@@ -103,9 +101,34 @@ function split(room, n, { tall = 16 } = {}) {
         <div class="split__track" style="--tall:${tall}rem" aria-hidden="true"><div class="split__bar" style="height:${pct ?? 0}%"></div></div>
         ${who(room, subject)}
         <p class="split__counts">${pass} pass, ${fail} fail</p>
+        <p class="split__agree">${agreedText({ pass, fail })}</p>
       </div>`;
     })
     .join("");
+}
+
+/** Every case with a result, by agent. On a phone each row reads as a card. */
+function evalTable(room) {
+  const rows = evalRows(room);
+  if (!rows.length) return `<p class="dim">No case has a result yet.</p>`;
+  const cell = (c) => {
+    const word = c.silent ? "no answer" : c.verdict === "tied" ? "tied" : c.verdict ? `${c.verdict.toUpperCase()} ${c.share}%` : "no grades";
+    return `<td data-verdict="${c.verdict ?? "none"}"><span class="eval__who">${who(room, c.subject)}</span><span>${word}</span></td>`;
+  };
+  const head = room.subjects.map((s) => `<th scope="col">${who(room, s)}</th>`).join("");
+  const body = rows
+    .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}${r.prompt?.commitment ? `: ${escapeHtml(r.prompt.commitment)}` : ""}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
+    .join("");
+  return `<table class="eval"><caption class="sr-only">Every case, with each agent's majority verdict and its share</caption><thead><tr><th scope="col">case</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/** Questions for the room after the latest result. */
+function talkCard(room) {
+  const newest = room.rounds[room.rounds.length - 1];
+  const last = newest?.split ? evalRows(room).find((r) => r.n === newest.n) : null;
+  if (!last) return "";
+  const { questions } = talkFor(room, last);
+  return `<section class="talk" aria-labelledby="talk-title"><h2 id="talk-title">Talk it through</h2><ul>${questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul></section>`;
 }
 
 /** Failing grades across the session, grouped by subject. */
@@ -135,5 +158,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, board, lexicalNote, split, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, caseCard, split, evalTable, talkCard, failures, setHtml, subjectById };
 })();
