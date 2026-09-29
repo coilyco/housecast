@@ -107,7 +107,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson } = window.Room;
+const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson, SHOW_PROPOSALS } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -136,10 +136,10 @@ function keepToken(value) {
 const PICK_ANYWAY_S = 75;
 
 const NEXT = {
-  holding: { label: "Open proposals", to: "submissions" },
+  holding: { label: SHOW_PROPOSALS ? "Open proposals" : "Show the join address", to: "submissions" },
   submissions: { label: "Pick a case to start grading", to: null },
   grading: { label: "Close grading, show the results", to: "split" },
-  split: { label: "Open proposals for the next case", to: "submissions" },
+  split: { label: SHOW_PROPOSALS ? "Open proposals for the next case" : "Wait for the next case", to: "submissions" },
   closing: { label: "Back to holding", to: "holding" },
 };
 
@@ -185,7 +185,7 @@ function renderIncoming() {
           <span class="chips"><span class="src" data-src="${escapeHtml(p.source ?? "attendee")}">${p.source === "prepared" ? "prepared" : "from the room"}</span>${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
           <span class="chips">${chips(p)}</span></button></li>`;
       }).join("")
-    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : "No cases yet. Add prepared ones above, or open proposals."}</li>`);
+    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add prepared ones above, or open proposals." : "No cases yet. Paste one above."}</li>`);
 }
 
 /** What picking the selected prompt would do, so the bar and the panel say the same thing. */
@@ -196,7 +196,8 @@ function isUsed(id) {
 function pickInfo(now) {
   const prompt = selected ? promptById(room, selected) : null;
   // A prompt already graded is never armed, so the last round's case is one tap from re-running.
-  if (!prompt || room.phase !== "submissions" || isUsed(prompt.id)) return null;
+  // Results count too, so the screen never drops to waiting between two cases.
+  if (!prompt || !["holding", "submissions", "split"].includes(room.phase) || isUsed(prompt.id)) return null;
   // Grading on a missing answer would leave the room nothing to grade, so the pick waits for all four.
   // Empty and failed are final, so only queued or running holds the pick. A subject
   // stuck past PICK_ANYWAY_S can't stall the round: the pick opens, and says who is missing.
@@ -216,7 +217,7 @@ function renderDetail(now) {
   $("detail-title").textContent = prompt ? prompt.text : "Pick a case to read its four answers";
   const d = prompt && room.divergence[prompt.id];
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
-  V.setHtml($("detail-case"), prompt ? V.caseCard({ commitment: prompt.commitment, source: prompt.source }, { withText: false }) : "");
+  V.setHtml($("detail-case"), prompt ? V.caseCard({ commitment: prompt.commitment, source: prompt.source }, { withText: false, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   const pick = pickInfo(now);
   $("pick").hidden = !pick;

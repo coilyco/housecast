@@ -125,3 +125,38 @@ def test_the_screen_shows_the_machine_measurement_apart_from_the_bars() -> None:
     assert "by word overlap" in views and "Jev did not answer" in views
     assert 'id="measure"' in screen and "V.measure(room, last.prompt_id)" in screen
     assert "measure" not in views[views.index("function split(") : views.index("function measure(")]
+
+
+# Kai has never used the word, so the phone and the recording carry none of it. What
+# survives is a code identifier: `prompt.commitment`, or a `commitment:` key in demo data.
+COMMITMENT_IDENTIFIER = re.compile(r"(\?\.|\.)commitment\b|\bcommitment(?=\s*[:,)\]])")
+SURFACE_FILES = ("index.html", "screen.html", "views.js", "room.js")
+
+
+def test_no_phone_or_screen_copy_says_commitment() -> None:
+    for name in SURFACE_FILES:
+        text = COMMITMENT_IDENTIFIER.sub("", (PAGE / name).read_text(encoding="utf-8"))
+        assert "commitment" not in text.lower(), name
+
+
+def test_no_rule_line_and_no_discussion_card_on_the_room_surfaces() -> None:
+    """Kai sets the rule out loud and the room talks in Zoom chat."""
+    for name in SURFACE_FILES:
+        text = (PAGE / name).read_text(encoding="utf-8")
+        for gone in ("RUBRIC", "talkCard", "talkFor", "Talk it through", "case-tests"):
+            assert gone not in text, f"{name}: {gone}"
+    assert 'id="talk"' not in (PAGE / "screen.html").read_text(encoding="utf-8")
+
+
+def test_the_propose_form_is_behind_its_switch_and_asks_only_for_the_prompt() -> None:
+    room_js = (PAGE / "room.js").read_text(encoding="utf-8")
+    index = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert "const SHOW_PROPOSALS = false;" in room_js and "const SHOW_HINTS = false;" in room_js
+    assert "phaseNow()" in index and 'name="commitment"' not in index
+    assert 'postJson("api/prompts", { text, device: device() }' in index
+
+
+def test_a_pasted_case_can_be_picked_from_holding_and_from_results() -> None:
+    """Kai queues the next prompt while results show, so the pick cannot need submissions."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert '["holding", "submissions", "split"].includes(room.phase)' in present

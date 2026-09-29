@@ -2,7 +2,7 @@
 // same on a phone, the shared screen, and the presenter's surface.
 (() => {
 "use strict";
-const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, talkFor, SLOW_S, LONG_S } = window.Room;
+const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, SLOW_S, LONG_S } = window.Room;
 
 function who(room, subject) {
   const look = lookOf(room, subject);
@@ -63,7 +63,7 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
     body = `<p class="answer__reason">${escapeHtml(why)}</p>`;
   }
   else if (answer.state === "running" || answer.state === "queued")
-    body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason">Some answers take a minute or more.</p>` : ""}`;
+    body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason hint">Some answers take a minute or more.</p>` : ""}`;
   const look = lookOf(room, subject);
   const intro = about && look.role ? `<p class="answer__about"><b>${escapeHtml(look.role)}</b><span>${escapeHtml(look.line)}</span></p>` : "";
   return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${look.color}" aria-label="${escapeHtml(subject.label)}">
@@ -72,12 +72,12 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   </article>`;
 }
 
-/** The case being graded: the commitment it tests, then the prompt. */
-function caseCard(prompt, { withText = true } = {}) {
+/** The case being graded: the prompt alone, and for the presenter its test and origin. */
+function caseCard(prompt, { withText = true, presenter = false } = {}) {
   if (!prompt) return "";
-  const tests = prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
+  const tests = presenter && prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
   const text = withText && prompt.text ? `<p class="case__text">${escapeHtml(prompt.text)}</p>` : "";
-  const from = prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
+  const from = !presenter ? "" : prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
   return `<div class="case">${tests}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
 }
 
@@ -138,18 +138,9 @@ function evalTable(room) {
   };
   const head = room.subjects.map((s) => `<th scope="col">${who(room, s)}</th>`).join("");
   const body = rows
-    .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}${r.prompt?.commitment ? `: ${escapeHtml(r.prompt.commitment)}` : ""}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
+    .map((r) => `<tr><th scope="row"><span class="eval__case">case ${r.n}</span>${r.prompt?.text ? `<span class="eval__text">${escapeHtml(r.prompt.text)}</span>` : ""}</th>${r.cells.map(cell).join("")}</tr>`)
     .join("");
   return `<table class="eval"><caption class="sr-only">Every case, with the grade most of the room gave each agent and its share</caption><thead><tr><th scope="col">case</th>${head}</tr></thead><tbody>${body}</tbody></table>`;
-}
-
-/** Questions for the room after the latest result. */
-function talkCard(room) {
-  const newest = room.rounds[room.rounds.length - 1];
-  const last = newest?.split ? evalRows(room).find((r) => r.n === newest.n) : null;
-  if (!last) return "";
-  const { questions } = talkFor(room, last);
-  return `<section class="talk" aria-labelledby="talk-title"><h2 id="talk-title">Talk it through</h2><ul>${questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul></section>`;
 }
 
 /** Failing grades across the session, grouped by subject. */
@@ -179,5 +170,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, caseCard, split, measure, evalTable, talkCard, failures, setHtml, subjectById };
+window.RoomViews = { who, cast, answerCard, caseCard, split, measure, evalTable, failures, setHtml, subjectById };
 })();

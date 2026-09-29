@@ -31,16 +31,13 @@
 
 <main class="wrap" id="main" hidden>
   <p class="eyebrow" id="eyebrow">the room</p>
-  <div id="case-tests" hidden></div>
   <h1 id="title">Waiting on the presenter</h1>
   <p class="dim" id="lead"></p>
   <p class="mono" id="join" style="font-size:1.8rem;color:var(--pass)"></p>
   <ul class="cast" id="cast" aria-label="The four agents"></ul>
-  <p class="rubric" id="rubric" hidden></p>
   <div class="answers" id="answers" hidden></div>
   <div class="split" id="split" hidden></div>
   <div id="measure" hidden></div>
-  <div id="talk" hidden></div>
   <div id="eval" hidden></div>
   <p class="dim" id="foot"></p>
 </main>
@@ -49,7 +46,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { promptById, seconds, RUBRIC, RUBRIC_FAIL } = window.Room;
+const { promptById, seconds, SHOW_PROPOSALS } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 const host = location.host;
@@ -101,7 +98,7 @@ function lengthClass(text) {
 }
 
 function only(...ids) {
-  for (const id of ["join", "cast", "rubric", "answers", "split", "measure", "talk", "eval"]) $(id).hidden = !ids.includes(id);
+  for (const id of ["join", "cast", "answers", "split", "measure", "eval"]) $(id).hidden = !ids.includes(id);
 }
 
 function render() {
@@ -120,47 +117,39 @@ function render() {
   $("main").dataset.phase = room.phase;
   const eyebrow = $("eyebrow");
   eyebrow.className = "eyebrow";
-  const tests = (prompt) => {
-    V.setHtml($("case-tests"), prompt?.commitment ? V.caseCard({ commitment: prompt.commitment }, { withText: false }) : "");
-    $("case-tests").hidden = !prompt?.commitment;
-  };
-  $("case-tests").hidden = true;
   if (room.phase === "submissions") {
-    eyebrow.textContent = "proposals open";
-    eyebrow.classList.add("eyebrow--open");
-    $("title").textContent = "Propose a test case";
+    // With proposals hidden, this phase is the join address and nothing else.
+    eyebrow.textContent = SHOW_PROPOSALS ? "proposals open" : "the room";
+    if (SHOW_PROPOSALS) eyebrow.classList.add("eyebrow--open");
+    $("title").textContent = SHOW_PROPOSALS ? "Propose a test case" : "Waiting on the presenter";
     $("title").dataset.len = "";
     // Prepared cases are not proposals, and no proposal's text reaches the recording until Kai picks it.
     const proposed = room.prompts.filter((p) => p.source !== "prepared").length;
-    $("lead").textContent = `${proposed} proposed so far. Proposals stay on your screen until Kai promotes one.`;
+    $("lead").textContent = SHOW_PROPOSALS ? `${proposed} proposed so far. Proposals stay on your screen until Kai promotes one.` : "";
     $("join").textContent = host;
     $("foot").textContent = "";
     only("join");
   } else if (room.phase === "grading") {
     const prompt = promptById(room, room.round.prompt_id);
     eyebrow.textContent = `case ${room.round.n} // grading`;
-    tests(prompt);
     $("title").textContent = prompt?.text ?? "";
     $("title").dataset.len = lengthClass(prompt?.text);
     $("lead").textContent = "";
-    $("rubric").textContent = `${RUBRIC} ${RUBRIC_FAIL}`;
     V.setHtml($("answers"), room.subjects.map((s) => V.answerCard(room, room.round.prompt_id, s, now)).join(""));
     const n = room.round.graded ?? 0;
-    $("foot").textContent = `${n} graded so far. Grade on your own screen.`;
-    only("rubric", "answers");
+    $("foot").textContent = `${n} graded`;
+    only("answers");
   } else if (room.phase === "split") {
     const last = room.rounds[room.rounds.length - 1];
     eyebrow.textContent = `case ${last?.n ?? room.round.n} // results`;
     const prompt = promptById(room, last?.prompt_id);
-    tests(prompt);
     $("title").textContent = prompt?.text ?? "The results";
     $("title").dataset.len = lengthClass(prompt?.text);
-    $("lead").textContent = "Share of the room grading PASS, and how many graders agreed.";
+    $("lead").textContent = "";
     V.setHtml($("split"), (last && V.split(room, last.n, { tall: 22 })) ?? "");
     V.setHtml($("measure"), last ? V.measure(room, last.prompt_id) : "");
-    V.setHtml($("talk"), V.talkCard(room));
     $("foot").textContent = "";
-    only("split", "measure", "talk");
+    only("split", "measure");
   } else if (room.phase === "closing") {
     eyebrow.textContent = "the eval, this session";
     eyebrow.classList.add("eyebrow--closing");
@@ -170,7 +159,7 @@ function render() {
     // The reasons are attendee-typed, so the recording shows the table and Kai reads them aloud.
     V.setHtml($("eval"), V.evalTable(room));
     fitEval();
-    $("foot").textContent = "The reasons are on Kai's screen, and she reads them aloud.";
+    $("foot").textContent = "";
     only("eval");
   }
 }
