@@ -141,10 +141,6 @@ p { margin: 0; }
 
 /* The shared screen shows four answers at once, so each fades rather than
    spilling past its card. */
-.screen .answers { flex: 1; min-height: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
-@media (max-aspect-ratio: 4/3) { .screen .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.screen .answer { min-height: 0; overflow: hidden; }
-.screen .answer__text { flex: 1; min-height: 0; mask-image: linear-gradient(to bottom, #000 82%, transparent); overflow: hidden; }
 
 /* ------------------------------------------------------------- verdicts */
 .verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
@@ -204,32 +200,13 @@ p { margin: 0; }
 .split__track { width: min(100%, 9rem); height: var(--tall); display: flex; align-items: flex-end; }
 .split__bar { width: 100%; min-height: 0.3rem; background: var(--c); border-radius: 10px; }
 .split__counts { font-size: 0.85rem; color: var(--dim); }
-/* On /screen the split and the four answers fit the window, so a 16:9 recording
-   never loses the names under the bars. The page sets data-phase. */
-.screen #main[data-phase="split"], .screen #main[data-phase="grading"], .screen #main[data-phase="closing"] { height: 100dvh; overflow: hidden; }
-.screen #main h1[data-len="l"] { font-size: 1.9rem; }
-.screen #main h1[data-len="xl"] { font-size: 1.5rem; }
-.screen #main[data-phase="split"] h1, .screen #main[data-phase="grading"] h1 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+/* The closing table is fitted to the window, so nothing is cut off the recording. */
+.screen #main[data-phase="closing"] { height: 100dvh; overflow: hidden; }
 /* A machine reading, boxed and dashed so it never sits among the graded bars. */
 .measure { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.1rem 1rem; padding: 0.35rem 1rem; border: 1px dashed var(--dim); border-radius: 10px; text-align: center; }
-#measure:empty { display: none; }
 .measure__tag { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .measure__line { font-family: var(--mono); font-size: clamp(1rem, 2.6vmin, 1.5rem); color: var(--focus); }
 .measure__note { flex-basis: 100%; font-size: 0.85rem; color: var(--dim); }
-.screen .split { flex: 1; min-height: 12.5rem; grid-auto-rows: minmax(0, 1fr); }
-.screen .split__col { min-height: 0; height: 100%; gap: 0.3rem; }
-.screen .split__track { flex: 1; min-height: 2rem; height: auto; width: min(100%, 14rem); }
-.screen .split__share { font-size: clamp(1.8rem, 5.5vmin, 3rem); }
-.screen .split__counts { display: none; }
-.screen .split__col .logo { width: clamp(2.4rem, 8vmin, 6rem); height: clamp(2.4rem, 8vmin, 6rem); }
-/* A square or portrait window is too narrow for four columns, so two rows share it. */
-@media (max-aspect-ratio: 4/3) { .screen #main h1 { -webkit-line-clamp: 3; } }
-@media (max-aspect-ratio: 1/1) {
-  .screen .split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem 1.2rem; }
-  .screen .split__share { font-size: 2rem; }
-  .screen .split__track { min-height: 1.6rem; }
-  .screen .split__col .logo { width: clamp(2.2rem, 7vmin, 5rem); height: clamp(2.2rem, 7vmin, 5rem); }
-}
 @media (max-width: 480px) { .split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 0.5rem; } .split__share { font-size: 1.5rem; } }
 
 /* ------------------------------------------------------------- closing */
@@ -247,12 +224,8 @@ p { margin: 0; }
 .case__label { font-family: var(--mono); font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .case__text { color: var(--soft); overflow-wrap: anywhere; }
 .case__text, #title { white-space: pre-wrap; }
-.case__code, .context { margin: 0; padding: 0.6rem 0.8rem; overflow: auto; border-radius: 8px; border: 1px solid var(--line); background: var(--deep); color: var(--soft); font: 0.85rem/1.4 var(--mono); }
+.case__code { margin: 0; padding: 0.6rem 0.8rem; overflow: auto; border-radius: 8px; border: 1px solid var(--line); background: var(--deep); color: var(--soft); font: 0.85rem/1.4 var(--mono); }
 .case__code { max-height: 14rem; }
-.context { white-space: pre-wrap; overflow-wrap: anywhere; }
-.screen .context { flex: 0 1 auto; min-height: 5.5em; max-height: calc(var(--lines, 14) * 1.4em + 1.2rem + 3px); font-size: clamp(0.72rem, 1.9vmin, 1.05rem); }
-.screen .context__more { margin: -1.2vmin 0 0; font-size: 0.85rem; }
-.screen #main h1 { flex: none; }
 .case__from { font-size: 0.85rem; color: var(--dim); }
 .field input[type="text"] { min-height: 2.8rem; padding: 0 0.9rem; border-radius: 12px; border: 1px dashed #3d4856; background: #1a1f26; font-size: 1.05rem; }
 .mine { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -318,6 +291,7 @@ p { margin: 0; }
 .tally__bar { height: 0.4rem; border-radius: 999px; background: var(--line); overflow: hidden; }
 .tally__bar i { display: block; height: 100%; background: var(--c); }
 .tally__counts { grid-column: 1 / -1; font-size: 0.85rem; color: var(--dim); }
+.sheet .answer .tally { margin-top: auto; }
 .sheet--old { padding: 0; border-top-width: 1px; }
 .sheet--old > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; min-height: 2.75rem; padding: 0.7rem 1rem; cursor: pointer; }
 .sheet--old[open] { padding-bottom: 1rem; }
@@ -325,6 +299,25 @@ p { margin: 0; }
 .sheet__q { flex: 1 1 14rem; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
 .sheet__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .sheet__chip { padding: 0 0.5rem; border: 1px solid var(--c); border-radius: 999px; color: var(--c); font-family: var(--mono); font-size: 0.75rem; }
+
+/* On /screen the top case must read from a recording, so its type follows the window. */
+.sheet__note { font-family: var(--mono); font-size: 0.85rem; color: var(--dim); }
+.screen, .screen body { scrollbar-width: none; }
+.screen::-webkit-scrollbar { display: none; }
+.screen .sheets { gap: 1.6vmin; }
+.screen .sheet { padding: 1.6vmin; gap: 1.4vmin; }
+.screen .sheet__num { font-size: clamp(0.9rem, 2.2vmin, 1.4rem); }
+.screen .chip, .screen .sheet__note { font-size: clamp(0.75rem, 1.9vmin, 1.1rem); }
+.screen .case { padding: 1.2vmin 1.6vmin; }
+.screen .case__text { color: var(--text); font-size: clamp(1.3rem, 3.6vmin, 2.4rem); font-weight: 600; line-height: 1.25; }
+.screen .case__code { max-height: 27vh; font-size: clamp(0.72rem, 1.7vmin, 1rem); }
+.screen .sheets[data-phase="split"] .case__code { max-height: 20vh; }
+.screen .sheet__answers { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4vmin; }
+@media (max-aspect-ratio: 4/3) { .screen .sheet__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.screen .sheet .answer { padding: 1.2vmin 1.4vmin; }
+.screen .sheet .answer__text { max-height: 27vh; font-size: clamp(0.85rem, 2vmin, 1.25rem); }
+.screen .tally__share { font-size: clamp(1.4rem, 4vmin, 2.6rem); }
+.screen .tally__counts { font-size: clamp(0.8rem, 1.8vmin, 1.1rem); }
 
 /* Kai says the instructions aloud. SHOW_HINTS in room.js brings them back. */
 html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { display: none; }

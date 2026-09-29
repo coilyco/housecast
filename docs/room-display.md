@@ -4,8 +4,8 @@ The three pages [`room.md`](room.md) serves from `housecast/room/page/`, with no
 
 ## One room, three readers
 
-* `/` is the attendee page on a phone, in whichever phase the presenter set. Attendees see one casebook column: the newest case on top with its four answers side by side, PASS and FAIL while grading and each agent's tally once results open, and earlier cases folded below. Proposing is off (`SHOW_PROPOSALS` in `room.js`) since Kai takes prompts from Zoom chat, and instruction sentences are hidden (`SHOW_HINTS`). A guard test keeps competition wording off this page and `/screen`.
-* `/screen` is shared into the call and lands on the public recording. It reads `?view=screen`, so no prompt text reaches it until the presenter picks one. After each result it shows Jev's divergence, boxed as a machine measurement and never a grade, and in closing the eval table without reasons, which are attendee-typed.
+* `/` is the attendee page on a phone, in whichever phase the presenter set. Attendees see one casebook column: the newest case on top with four answers side by side, PASS and FAIL while grading, each agent's tally once results open, earlier cases folded below. Proposing is off (`SHOW_PROPOSALS` in `room.js`) since Kai takes prompts from Zoom chat, and instruction sentences are hidden (`SHOW_HINTS`). A guard test keeps competition wording off this page and `/screen`.
+* `/screen` is shared into the call and lands on the public recording. It reads `?view=screen`, so no prompt text reaches it until the presenter picks one. It draws the same casebook without buttons, Jev's divergence boxed as a machine measurement and never a grade, and in closing the eval table without reasons, which are attendee-typed.
 * `/present` is the presenter's. The bar's one button follows the phase and acts on the prompt selected in the list. In closing it raises the closer. Pasting a prompt into "Add prepared cases" works in any phase, and its pick opens from holding, submissions or results. A file of `{text, commitment}` also loads ([`room-cases.md`](room-cases.md)). Its divergence score doubles as a sorting aid. A token in `#token=` is taken once, dropped from the address, and kept in localStorage, so a reload or a new tab keeps control.
 
 `/screen` is the only thing on the recording, so its holding state is the opening shot, in the presenter's own words from her deck. Its closer shows exactly the approved invitation and two links with no heading. The presenter raises the closer from `/present` over a BroadcastChannel on the same laptop, so the shared tab never navigates, and `#closer` does it by hand.
@@ -14,7 +14,7 @@ The three pages [`room.md`](room.md) serves from `housecast/room/page/`, with no
 
 The presenter's session flow deck is the visual reference, so the pages take its dark slate, IBM Plex Sans, and each subject's colour and logo from `subjects.json`. A subject is always its logo, name, and colour together, never hue alone. Divergence bars are neutral because rose means FAIL.
 
-The shared screen scales type off the short side of the window. A pasted prompt's context shows in a scrolling box under its question, 14 lines on grading and 10 on results.
+The shared screen scales type off the short side of the window. A pasted prompt's context shows in a scrolling box above its question. At 1280x720 that is 9 lines while grading and 6 on results.
 
 ## Staying up
 
