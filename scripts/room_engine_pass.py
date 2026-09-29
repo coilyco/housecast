@@ -75,6 +75,8 @@ def run(pw: Playwright, name: str, base: str, token: str, out: Path) -> Pass:
     control(api, token, "api/control/phase", {"phase": "holding"})
     page.goto("/")
     page.get_by_text("Waiting on the presenter").wait_for(timeout=15000)
+    # The heading is static HTML, the cast fills after the room fetch.
+    page.locator("#holding-cast li").last.wait_for(timeout=15000)
     cast = page.locator("#holding-cast").inner_text()
     named = all(label in cast for label in subjects)
     upright = no_sideways_scroll(page)
