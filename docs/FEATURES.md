@@ -22,6 +22,7 @@ Coarse inventory of the major capabilities housecast ships.
   rounds: `evaluations/jevroute-eco/`, `teable:coilyco/sirens-echo#8221`.
 * **The live room.** `housecast room serve` under the `room` extra: prompt intake, fan-out to every
   subject, a divergence score, and a restart log. [`room.md`](room.md).
+  Prompt commitments and presenter-prepared cases: [`room-cases.md`](room-cases.md).
   Its attendee, shared-screen, and presenter pages: [`room-display.md`](room-display.md).
 * **The PyPI release train.** A pushed `housecast-v*` tag gates, builds and uploads. [`publishing.md`](publishing.md).
 

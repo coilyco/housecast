@@ -23,9 +23,9 @@ Rate limits key on the viewer's address. `ROOM_TRUSTED_HOPS` counts the `X-Forwa
 ## Surfaces
 
 `GET /api/room` is the snapshot and `/api/room/events` streams the same shapes
-with a `rev`. `?view=screen` withholds unpicked prompt text for the recorded
-screen. Answer text shows only once its prompt is picked, and grades travel as a
-count until the presenter reaches the split. `/api/control/*` is the presenter.
+with a `rev`. `?view=screen` withholds unpicked prompt text. Answer text shows
+once its prompt is picked, and grades travel as a count until the split.
+`/api/control/*` is the presenter. Commitments, prepared cases: [`room-cases.md`](room-cases.md).
 
 ## Answers and scores
 

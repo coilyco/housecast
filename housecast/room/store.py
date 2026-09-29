@@ -20,6 +20,13 @@ PHASES = ("holding", "submissions", "grading", "split", "closing")
 # Attendees never learn which model is behind a label, so `model` stays out with `system`.
 HIDDEN_SUBJECT_KEYS = frozenset({"system", "model"})
 VIEWS = ("attendee", "screen", "presenter")
+# Only the presenter learns where a prompt came from.
+PRESENTER_ONLY_PROMPT_KEYS = frozenset({"source"})
+
+
+def with_prompt_defaults(data: dict[str, Any]) -> dict[str, Any]:
+    """A log from before commitments has neither key, so it replays as an attendee prompt."""
+    return {"commitment": "", "source": "attendee", **data}
 
 
 def now() -> str:
@@ -54,6 +61,8 @@ class Room:
             self._apply(event)
 
     def emit(self, kind: str, data: dict[str, Any]) -> dict[str, Any]:
+        if kind == "prompt":
+            data = with_prompt_defaults(data)
         event = {"rev": self.rev + 1, "at": now(), "kind": kind, "data": data}
         if self.log_path is not None:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +78,7 @@ class Room:
         kind, data = event["kind"], event["data"]
         self.rev = max(self.rev, int(event["rev"]))
         if kind == "prompt":
-            self.prompts.append(data)
+            self.prompts.append(with_prompt_defaults(data))
         elif kind == "answer":
             self.answers[(data["prompt_id"], data["subject_id"])] = data
         elif kind == "divergence":
@@ -125,9 +134,16 @@ class Room:
         return {k: v for k, v in answer.items() if k != "text"}
 
     def _prompt_view(self, prompt: dict[str, Any], view: str) -> dict[str, Any]:
-        if view != "screen" or prompt["id"] in self.picked():
+        """Screen hides unpicked text. A prepared case hides text and commitment from both."""
+        if view == "presenter":
             return prompt
-        return {k: v for k, v in prompt.items() if k != "text"}
+        shown = {k: v for k, v in prompt.items() if k not in PRESENTER_ONLY_PROMPT_KEYS}
+        if prompt["id"] in self.picked():
+            return shown
+        if view == "screen" or prompt["source"] == "prepared":
+            shown = {k: v for k, v in shown.items() if k != "text"}
+            shown["commitment"] = ""
+        return shown
 
     def snapshot(self, view: str = "attendee") -> dict[str, Any]:
         current = self.current

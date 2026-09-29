@@ -20,6 +20,7 @@ from housecast.room.store import PHASES, TERMINAL, Room, now
 log = logging.getLogger(__name__)
 
 MAX_PROMPT = 280
+MAX_COMMITMENT = 140
 RETRY_PAUSE = 2.0
 MAX_REASON = 140
 VERDICTS = frozenset({"pass", "fail"})
@@ -50,21 +51,41 @@ class Engine:
         task.add_done_callback(self._tasks.discard)
 
     def validate(self, text: str) -> str:
-        text = text.strip()
         if self.room.phase != "submissions":
             raise PromptRefusedError("submissions are not open", 409)
+        return self._clean(text)
+
+    @staticmethod
+    def _clean(text: str) -> str:
+        text = text.strip()
         if not text:
             raise PromptRefusedError("the prompt is empty")
         if len(text) > MAX_PROMPT:
             raise PromptRefusedError(f"the prompt is over {MAX_PROMPT} characters")
         return text
 
-    def submit(self, text: str) -> dict[str, Any]:
-        text = self.validate(text)
+    @staticmethod
+    def check_commitment(commitment: str | None) -> str:
+        commitment = (commitment or "").strip()
+        if len(commitment) > MAX_COMMITMENT:
+            raise PromptRefusedError(f"the commitment is over {MAX_COMMITMENT} characters")
+        return commitment
+
+    def submit(self, text: str, commitment: str | None = None) -> dict[str, Any]:
+        """An attendee prompt, taken only while submissions are open."""
+        return self._open(self.validate(text), self.check_commitment(commitment), "attendee")
+
+    def prepare(self, text: str, commitment: str | None = None) -> dict[str, Any]:
+        """A presenter case, taken in any phase. It fans out like an attendee prompt."""
+        return self._open(self._clean(text), self.check_commitment(commitment), "prepared")
+
+    def _open(self, text: str, commitment: str, source: str) -> dict[str, Any]:
         prompt = {
             "id": secrets.token_hex(4),
             "seq": len(self.room.prompts) + 1,
             "text": text,
+            "commitment": commitment,
+            "source": source,
             "at": now(),
         }
         self.room.emit("prompt", prompt)
