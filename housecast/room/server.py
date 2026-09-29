@@ -36,6 +36,12 @@ GRACEFUL_SHUTDOWN = 5
 class Intake(BaseModel):
     text: str = ""
     device: str = ""
+    commitment: str | None = None
+
+
+class Case(BaseModel):
+    text: str = ""
+    commitment: str | None = None
 
 
 class GradeSheet(BaseModel):
@@ -200,12 +206,25 @@ def create_app(
     async def submit(intake: Intake, request: Request) -> dict[str, Any] | JSONResponse:
         try:
             state["engine"].validate(intake.text)
+            state["engine"].check_commitment(intake.commitment)
             if not limit.allow(intake.device, client_of(request, trusted_hops, client_header)):
                 return JSONResponse({"reason": "one prompt at a time: wait a moment"}, 429)
-            prompt = state["engine"].submit(intake.text)
+            prompt = state["engine"].submit(intake.text, intake.commitment)
         except PromptRefusedError as refused:
             return refuse(refused)
         return {"id": prompt["id"]}
+
+    @app.post("/api/control/cases", status_code=201, response_model=None)
+    async def add_case(
+        case: Case, x_control_token: str | None = Header(default=None)
+    ) -> dict[str, Any] | JSONResponse:
+        # Presenter only, and outside `limit` and `ballots` on purpose.
+        presenter(x_control_token)
+        try:
+            prompt = state["engine"].prepare(case.text, case.commitment)
+        except PromptRefusedError as refused:
+            return refuse(refused)
+        return {"id": prompt["id"], "seq": prompt["seq"]}
 
     @app.post("/api/grades", response_model=None)
     async def grade(sheet: GradeSheet, request: Request) -> dict[str, Any] | JSONResponse:
