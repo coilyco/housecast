@@ -39,7 +39,7 @@
 <form class="wrap gate" id="gate" hidden>
   <p class="eyebrow eyebrow--live">presenter</p>
   <h1>Presenter token</h1>
-  <p class="dim" id="gate-why">The room prints this token when it starts. It stays in this tab only.</p>
+  <p class="dim" id="gate-why">The room prints this token when it starts. It stays in this browser.</p>
   <label class="field">Token<input id="gate-token" type="password" autocomplete="off" required></label>
   <button class="pick" type="submit">Open the presenter surface</button>
 </form>
@@ -164,7 +164,7 @@ function renderIncoming() {
           <span>${escapeHtml(p.text)}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
           <span class="chips">${chips(p)}</span></button></li>`;
       }).join("")
-    : `<li class="dim">No prompts yet. They arrive once submissions open.</li>`);
+    : `<li class="dim">${room.phase === "submissions" ? "No prompts yet. They appear here as people send them." : "No prompts yet. They arrive once submissions open."}</li>`);
 }
 
 /** What picking the selected prompt would do, so the bar and the panel say the same thing. */
@@ -190,7 +190,7 @@ function renderDetail(now) {
   $("detail-title").textContent = prompt ? prompt.text : "Pick a prompt to read its four answers";
   const d = prompt && room.divergence[prompt.id];
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
-  V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now)).join("") : "");
+  V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   const pick = pickInfo(now);
   $("pick").hidden = !pick;
   if (pick) {
@@ -223,12 +223,26 @@ function renderRound() {
 // so the shared tab never navigates. `/screen#closer` is the fallback on another machine.
 let closerShown = false;
 let screenChannel = null;
+let screenAck = false;
+let refused = false;
 try {
   screenChannel = new BroadcastChannel("room-screen");
   screenChannel.onmessage = (event) => {
     if (event.data?.ask) screenChannel.postMessage({ closer: closerShown });
+    if (event.data?.ack) screenAck = true;
   };
 } catch {}
+
+/** The channel only reaches a /screen tab in this browser profile, so a silent one is said aloud. */
+function toggleCloser() {
+  closerShown = !closerShown;
+  screenAck = false;
+  screenChannel.postMessage({ closer: closerShown });
+  setTimeout(() => {
+    $("status").textContent = screenAck ? "" : "The shared screen did not answer. Open it in this browser, or add #closer to its address.";
+  }, 1500);
+  render();
+}
 
 function render() {
   if (!room) return;
@@ -237,7 +251,9 @@ function render() {
     closerShown = false;
     screenChannel?.postMessage({ closer: false });
   }
-  $("phase-label").textContent = `phase // ${room.phase}${room.round.n ? ` // round ${room.round.n}` : ""}`;
+  // Attendees read the round being opened, so submissions names the next one.
+  const shown = room.phase === "submissions" ? room.round.n + 1 : room.round.n;
+  $("phase-label").textContent = `phase // ${room.phase}${shown ? ` // round ${shown}` : ""}`;
   const pick = pickInfo(now);
   const next = NEXT[room.phase];
   // In closing the primary raises the closer, since going back to holding resets the room.
@@ -255,7 +271,11 @@ function render() {
 function renderLink() {
   $("banner").hidden = link.live;
   if (link.refused) {
-    $("banner").textContent = "The room refused that token. Reload with the token it printed.";
+    $("banner").hidden = true;
+    $("surface").hidden = true;
+    $("gate").hidden = false;
+    refused = true;
+    $("gate-why").textContent = "The room refused that token. Paste the one it printed when it started.";
     try { localStorage.removeItem("room-token"); } catch {}
   } else if (!link.live) {
     $("banner").textContent = `Reconnecting. This is from ${seconds(new Date(link.since).toISOString(), Date.now())}s ago.`;
@@ -295,11 +315,7 @@ document.querySelector(".sort").addEventListener("click", (event) => {
 });
 $("next").addEventListener("click", () => {
   if (pickInfo(Date.now())) return void control("pick", { prompt_id: selected });
-  if (room.phase === "closing" && screenChannel) {
-    closerShown = !closerShown;
-    screenChannel.postMessage({ closer: closerShown });
-    return render();
-  }
+  if (room.phase === "closing" && screenChannel) return toggleCloser();
   const next = NEXT[room.phase];
   if (next.to) void control("phase", { phase: next.to });
 });
@@ -314,7 +330,9 @@ $("gate").addEventListener("submit", (event) => {
   event.preventDefault();
   token = $("gate-token").value.trim();
   keepToken(token);
-  start();
+  // A refused session holds a stopped stream and old headers, so it starts clean.
+  if (refused) location.reload();
+  else start();
 });
 
 if (token || demo) start();

@@ -229,6 +229,7 @@ function connectLive(onRoom, onLink, { snapshotUrl = "api/room", eventsUrl = "ap
     if (document.visibilityState === "visible") void check();
   });
   window.addEventListener("online", () => void check());
+  window.addEventListener("offline", () => setLive(false));
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) void check();
   });

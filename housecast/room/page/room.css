@@ -145,7 +145,7 @@ p { margin: 0; }
 .screen .answers { flex: 1; min-height: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); }
 @media (max-aspect-ratio: 4/3) { .screen .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .screen .answer { min-height: 0; overflow: hidden; }
-.screen .answer__text { mask-image: linear-gradient(to bottom, #000 82%, transparent); overflow: hidden; }
+.screen .answer__text { flex: 1; min-height: 0; mask-image: linear-gradient(to bottom, #000 82%, transparent); overflow: hidden; }
 
 /* ------------------------------------------------------------- verdicts */
 .verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
@@ -186,6 +186,7 @@ p { margin: 0; }
 /* ---------------------------------------------------------- leaderboard */
 .board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .board li { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto; grid-template-areas: "rank text score" "rank meter meter"; gap: 0.25rem 0.8rem; padding: 0.6rem 0.8rem; border-radius: 10px; background: var(--card); }
+.board li.dim { display: block; }
 .board li[data-mine="true"] { box-shadow: inset 4px 0 0 var(--pass); }
 .board__rank { grid-area: rank; color: var(--dim); font-variant-numeric: tabular-nums; }
 .board__text { grid-area: text; overflow-wrap: anywhere; }

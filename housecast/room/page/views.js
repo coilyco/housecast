@@ -53,12 +53,15 @@ function stateOf(answer, now) {
 }
 
 /** One subject's answer card. `extra` is appended inside it, for grading controls. */
-function answerCard(room, promptId, subject, now, extra = "", { about = false } = {}) {
+function answerCard(room, promptId, subject, now, extra = "", { about = false, cause = false } = {}) {
   const answer = answerFor(room, promptId, subject.id);
   const state = stateOf(answer, now);
   let body = "";
   if (answer.state === "done" && answer.text !== undefined) body = `<p class="answer__text">${escapeHtml(answer.text)}</p>`;
-  else if (answer.state === "empty" || answer.state === "failed") body = `<p class="answer__reason">${escapeHtml(answer.reason ?? "No reason given.")}</p>`;
+  else if (answer.state === "empty" || answer.state === "failed") {
+    const why = answer.state === "failed" && !cause ? "This agent's answer did not come back." : answer.reason ?? "No reason given.";
+    body = `<p class="answer__reason">${escapeHtml(why)}</p>`;
+  }
   else if (answer.state === "running" || answer.state === "queued")
     body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason">Usually about ${TYPICAL_S}s.</p>` : ""}`;
   const look = lookOf(room, subject);
@@ -84,7 +87,7 @@ function board(room, { withText = true, mine = new Set(), limit = Infinity } = {
 }
 
 function lexicalNote(room) {
-  return leaderboard(room).some((row) => row.divergence.method === "lexical") ? "* scored by word overlap, the fallback scorer." : "";
+  return leaderboard(room).some((row) => row.divergence.method === "lexical") ? "* Scored by word overlap, a rougher measure than the usual one." : "";
 }
 
 /** Each subject's PASS share for round `n`, as bars. Null before the split exists. */

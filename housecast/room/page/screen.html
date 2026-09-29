@@ -61,6 +61,7 @@ try {
     if (!("closer" in (event.data ?? {}))) return;
     closer = Boolean(event.data.closer);
     render();
+    channel.postMessage({ ack: true });
   };
   // A reloaded shared tab asks the presenter tab what it should be showing.
   channel.postMessage({ ask: true });
@@ -126,7 +127,7 @@ function render() {
     $("lead").textContent = "";
     // Reasons are attendee-typed, so the recorded screen shows counts and the presenter reads them.
     V.setHtml($("failures"), V.failures(room, { withReasons: false }));
-    $("foot").textContent = "The reasons are on the presenter's screen.";
+    $("foot").textContent = "The reasons are read aloud.";
     only("failures");
   }
 }
