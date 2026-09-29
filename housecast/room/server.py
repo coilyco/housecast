@@ -141,6 +141,8 @@ def create_app(
             if owned:
                 await http.aclose()
 
+    # Every handler is async on purpose: the room is one loop's state, and a sync
+    # handler runs on a thread that races `emit` and feeds a queue from off the loop.
     app = FastAPI(title="housecast room", docs_url=None, redoc_url=None, lifespan=lifespan)
 
     def presenter(token: str | None) -> None:
@@ -154,11 +156,13 @@ def create_app(
         return "screen" if view == "screen" else "attendee"
 
     @app.get("/api/room")
-    def snapshot(view: str | None = None) -> dict[str, Any]:
+    async def snapshot(view: str | None = None) -> dict[str, Any]:
         return room.snapshot(view_of(view, None) if view != "presenter" else "attendee")
 
     @app.get("/api/control/room")
-    def presenter_snapshot(x_control_token: str | None = Header(default=None)) -> dict[str, Any]:
+    async def presenter_snapshot(
+        x_control_token: str | None = Header(default=None),
+    ) -> dict[str, Any]:
         presenter(x_control_token)
         return room.snapshot("presenter")
 
@@ -204,7 +208,7 @@ def create_app(
         return {"id": prompt["id"]}
 
     @app.post("/api/grades", response_model=None)
-    def grade(sheet: GradeSheet, request: Request) -> dict[str, Any] | JSONResponse:
+    async def grade(sheet: GradeSheet, request: Request) -> dict[str, Any] | JSONResponse:
         address = client_of(request, trusted_hops, client_header)
         if sheet.device and not ballots.allow(sheet.round, address, sheet.device):
             return JSONResponse({"reason": "too many graders from this network"}, 429)
@@ -215,7 +219,7 @@ def create_app(
         return {"graded": graded}
 
     @app.post("/api/control/phase", response_model=None)
-    def set_phase(
+    async def set_phase(
         change: PhaseChange, x_control_token: str | None = Header(default=None)
     ) -> dict[str, Any] | JSONResponse:
         presenter(x_control_token)
@@ -226,7 +230,7 @@ def create_app(
         return {"phase": room.phase}
 
     @app.post("/api/control/pick", response_model=None)
-    def pick(
+    async def pick(
         choice: Pick, x_control_token: str | None = Header(default=None)
     ) -> dict[str, Any] | JSONResponse:
         presenter(x_control_token)
@@ -236,7 +240,7 @@ def create_app(
             return refuse(refused)
 
     @app.get("/healthz")
-    def healthz() -> dict[str, Any]:
+    async def healthz() -> dict[str, Any]:
         return {"ok": True, "rev": room.rev}
 
     if KIT.exists():
