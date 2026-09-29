@@ -102,3 +102,16 @@ def test_a_slow_answer_is_never_called_slow_or_usual() -> None:
     for name in ("views.js", "room.js"):
         text = (PAGE / name).read_text(encoding="utf-8")
         assert "slower than usual" not in text and "Usually about" not in text, name
+
+
+# Kai's cover line, character for character: her 06:15 self-check compares it.
+OPENING_LINE = (
+    "I've setup an array of 4 agents with separate composed personas and model backends. "
+    "We're going to be curating eval cases with the specific purpose of finding divergence "
+    "and digging into what source text is causing it."
+)
+
+
+def test_the_screen_opens_on_kais_cover_line() -> None:
+    html = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert f'<p class="dim">{OPENING_LINE}</p>' in html
