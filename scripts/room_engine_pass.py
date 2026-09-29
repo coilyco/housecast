@@ -5,12 +5,14 @@ against a dev or rehearsal room, never the live one. The presenter's moves go
 through the control API with the room's token. Step 4 (lock the phone) needs a
 real device and is left to the phone checklist. docs/room-site.md.
 
-    just room-engine-pass --base https://room.example --token T --writes
+    just room-engine-pass --base https://room.example --token-file /path/token --writes
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import stat
 import sys
 import time
 from pathlib import Path
@@ -144,18 +146,32 @@ def run(pw: Playwright, name: str, base: str, token: str, out: Path) -> Pass:
     return result
 
 
+def load_token(parser: argparse.ArgumentParser, args: argparse.Namespace) -> str:
+    if args.token_file:
+        if stat.S_IMODE(args.token_file.stat().st_mode) & 0o077:
+            parser.error(f"{args.token_file} is readable by others: chmod 600 it before use")
+        token = args.token_file.read_text().strip()
+    else:
+        token = args.token or os.environ.get("ROOM_CONTROL_TOKEN", "")
+    if not token:
+        parser.error("no control token: pass --token-file, --token, or set ROOM_CONTROL_TOKEN")
+    return token
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Walk the room's phone checklist in browser engines."
     )
     parser.add_argument("--base", required=True, help="the room's origin, ending in /")
-    parser.add_argument("--token", required=True, help="the room's presenter control token")
+    parser.add_argument("--token", help="the control token. Prefer --token-file: argv is visible")
+    parser.add_argument("--token-file", type=Path, help="a 0600 file holding the control token")
     parser.add_argument("--browser", action="append", choices=("chromium", "firefox", "webkit"))
     parser.add_argument("--out", type=Path, default=Path("dist/room-engine-pass"))
     parser.add_argument(
         "--writes", action="store_true", help="confirm this room's log may take test prompts"
     )
     args = parser.parse_args(argv)
+    args.token = load_token(parser, args)
     if not args.writes:
         parser.error(
             "this submits and grades, so pass --writes, and only against a dev or rehearsal room"
