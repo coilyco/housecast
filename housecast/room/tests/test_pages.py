@@ -23,3 +23,19 @@ def test_every_logo_the_demo_names_exists() -> None:
     assert len(slugs) == 4
     for slug in slugs:
         assert (PAGE / "creatures" / f"{slug}.png").is_file(), slug
+
+
+# The room is graded against written commitments, so nothing an attendee or the
+# recording can read ranks, scores or competes. /present keeps its own sorting aid.
+COMPETITION = re.compile(
+    r"\b(compete|competing|competition|win|wins|winner|points|leaderboard|rank|arcade)\b"
+    r"|most split|splits most|split them",
+    re.I,
+)
+ROOM_FACING = ("index.html", "screen.html", "views.js", "room.js")
+
+
+def test_no_competition_copy_on_an_attendee_or_screen_surface() -> None:
+    for name in ROOM_FACING:
+        found = COMPETITION.search((PAGE / name).read_text(encoding="utf-8"))
+        assert not found, f"{name}: {found.group(0)}"
