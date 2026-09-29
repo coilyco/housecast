@@ -31,6 +31,23 @@ _MARKUP = [
 ]
 
 
+class ModelRefusedError(ValueError):
+    """A configured room model whose name says it is an Anthropic model."""
+
+
+# A name heuristic only. What the proxy routes a name to is the real control. docs/room.md
+_BARRED = ("claude", "anthropic")
+
+
+def check_model_name(name: str, where: str) -> str:
+    if any(word in name.lower() for word in _BARRED):
+        raise ModelRefusedError(
+            f"{where}: {name!r} names an Anthropic model, and the room never sends "
+            "inference to one. Pick a non-Anthropic route."
+        )
+    return name
+
+
 def strip_markup(text: str) -> str:
     for pattern in _MARKUP:
         text = pattern.sub("", text)
@@ -52,6 +69,12 @@ class Settings:
     # round can be picked. The measured p95 was 43s.
     answer_deadline: float = 120.0
     jev_timeout: float = 60.0
+    # None means no fallback: a failed answer stays failed, as it always has.
+    fallback_model: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.fallback_model:
+            check_model_name(self.fallback_model, "the fallback model")
 
     def headers(self) -> dict[str, str]:
         headers = {"x-agent-session-id": self.user}
@@ -60,12 +83,18 @@ class Settings:
         return headers
 
 
-async def answer(client: httpx.AsyncClient, cfg: Settings, system: str, prompt: str) -> str:
+async def answer(
+    client: httpx.AsyncClient,
+    cfg: Settings,
+    system: str,
+    prompt: str,
+    model: str | None = None,
+) -> str:
     user = f"{prompt}\n\n{cfg.frame}" if cfg.frame else prompt
     reply = await client.post(
         f"{cfg.proxy}/v1/chat/completions",
         json={
-            "model": cfg.model,
+            "model": model or cfg.model,
             "user": cfg.user,
             "temperature": cfg.temperature,
             "max_tokens": cfg.max_tokens,

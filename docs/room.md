@@ -11,6 +11,8 @@ grade PASS or FAIL. Record and full data contract:
 `subjects.json` alone. Each subject is `{id, label, system}` or
 `{id, label, system_file}`, with optional `color` and `emblem` for the page.
 `label` is what the room shows, and nothing says where a prompt came from.
+A subject may also name its own `model`, and the room may name a fallback:
+[`room-models.md`](room-models.md).
 
 ## Environment
 

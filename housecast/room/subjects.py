@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from housecast.room.models import ModelRefusedError, check_model_name
+
 
 class SubjectsError(ValueError):
     """A subjects file the room cannot run."""
@@ -42,4 +44,15 @@ def load_subjects(path: Path) -> list[dict[str, str]]:
             if entry.get(extra):
                 subject[extra] = str(entry[extra])
         subjects.append(subject)
+        if "model" in entry:  # optional route for this subject, never shown. docs/room.md
+            subject["model"] = _model_of(entry["model"], f"{path}: subject {sid!r}")
     return subjects
+
+
+def _model_of(model: object, where: str) -> str:
+    if not isinstance(model, str) or not model.strip():
+        raise SubjectsError(f"{where} has a model that is not a name")
+    try:
+        return check_model_name(model.strip(), where)
+    except ModelRefusedError as refused:
+        raise SubjectsError(str(refused)) from refused
