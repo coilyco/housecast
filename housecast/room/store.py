@@ -17,6 +17,8 @@ from typing import Any
 
 TERMINAL = frozenset({"done", "empty", "failed"})
 PHASES = ("holding", "submissions", "grading", "split", "closing")
+# Attendees never learn which model is behind a label, so `model` stays out with `system`.
+HIDDEN_SUBJECT_KEYS = frozenset({"system", "model"})
 VIEWS = ("attendee", "screen", "presenter")
 
 
@@ -33,6 +35,8 @@ class Room:
     prompts: list[dict[str, Any]] = field(default_factory=list)
     answers: dict[tuple[str, str], dict[str, Any]] = field(default_factory=dict)
     divergence: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # prompt_id -> the fallback event's data. Its `model` is what a restart resumes with.
+    fallbacks: dict[str, dict[str, Any]] = field(default_factory=dict)
     rounds: list[dict[str, Any]] = field(default_factory=list)
     # (round n, device) -> {subject_id: {"verdict", "reason"?}}
     grades: dict[tuple[int, str], dict[str, dict[str, str]]] = field(default_factory=dict)
@@ -70,6 +74,12 @@ class Room:
             self.answers[(data["prompt_id"], data["subject_id"])] = data
         elif kind == "divergence":
             self.divergence[data["prompt_id"]] = data
+        elif kind == "fallback":
+            # One event re-queues the whole round, so a crash cannot leave it mixed.
+            self.fallbacks[data["prompt_id"]] = data
+            for subject in self.subjects:
+                key = {"prompt_id": data["prompt_id"], "subject_id": subject["id"]}
+                self.answers[(data["prompt_id"], subject["id"])] = {**key, "state": "queued"}
         elif kind == "phase":
             self.phase = data["phase"]
         elif kind == "round":
@@ -125,7 +135,9 @@ class Room:
             "rev": self.rev,
             "phase": self.phase,
             "round": None if current is None else {**current, "graded": self.graded(current["n"])},
-            "subjects": [{k: v for k, v in s.items() if k != "system"} for s in self.subjects],
+            "subjects": [
+                {k: v for k, v in s.items() if k not in HIDDEN_SUBJECT_KEYS} for s in self.subjects
+            ],
             "prompts": [self._prompt_view(p, view) for p in self.prompts],
             "answers": [self._answer_view(a, view) for a in self.answers.values()],
             "divergence": list(self.divergence.values()),
@@ -157,6 +169,8 @@ class Room:
             data = self._answer_view(data, view)
         elif kind == "prompt":
             data = self._prompt_view(data, view)
+        elif kind == "fallback":
+            data = {"prompt_id": data["prompt_id"]}  # that a switch happened, never to what
         elif kind == "grades" and view != "presenter":
             data = {"n": data["n"], "graded": self.graded(data["n"])}
         return {**event, "data": data}

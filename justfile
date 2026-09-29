@@ -148,3 +148,7 @@ room-site *ARGS:
 # Walk the room's phone checklist in Firefox and WebKit against a dev room (writes to its log).
 room-engine-pass *ARGS:
     @uv run --with playwright==1.57.0 python scripts/room_engine_pass.py "$@"
+
+# Hold a dev or rehearsal room under 30 simulated attendees for three rounds (writes to its log).
+room-load-test *ARGS:
+    @uv run --extra room python scripts/room_load_test.py "$@"

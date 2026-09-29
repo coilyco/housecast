@@ -8,6 +8,7 @@ that came back non-empty.
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 from typing import Any
 
@@ -15,6 +16,8 @@ import httpx
 
 from housecast.room import models
 from housecast.room.store import PHASES, TERMINAL, Room, now
+
+log = logging.getLogger(__name__)
 
 MAX_PROMPT = 280
 RETRY_PAUSE = 2.0
@@ -80,7 +83,9 @@ class Engine:
             started = now()
             self.room.emit("answer", {**base, "state": "running", "started_at": started})
             try:
-                text = await self._call(subject["system"], prompt["text"])
+                text = await self._call(
+                    subject["system"], prompt["text"], self._model_for(prompt, subject)
+                )
             except Exception as failed:  # the room shows it, and the other subjects carry on
                 self.room.emit(
                     "answer",
@@ -101,7 +106,12 @@ class Engine:
                 self.room.emit("answer", done)
         await self._maybe_score(prompt)
 
-    async def _call(self, system: str, text: str) -> str:
+    def _model_for(self, prompt: dict[str, Any], subject: dict[str, str]) -> str | None:
+        """None is the room's model. A switched round uses the model its event logged."""
+        switched = self.room.fallbacks.get(prompt["id"])
+        return switched["model"] if switched else subject.get("model")
+
+    async def _call(self, system: str, text: str, model: str | None = None) -> str:
         """One answer under the deadline, retried once on a transient proxy error."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.cfg.answer_deadline
@@ -111,7 +121,7 @@ class Engine:
                 raise TimeoutError
             try:
                 return await asyncio.wait_for(
-                    models.answer(self.client, self.cfg, system, text), timeout=remaining
+                    models.answer(self.client, self.cfg, system, text, model), timeout=remaining
                 )
             except (httpx.TransportError, httpx.HTTPStatusError) as err:
                 if attempt == 2 or not _transient(err):
@@ -126,6 +136,8 @@ class Engine:
         ):
             return
         if self.room.divergence.get(prompt["id"], {}).get("state") != "pending":
+            return
+        if self._maybe_fall_back(prompt, answers):
             return
         texts = [a["text"] for a in answers if a["state"] == "done"]
         base = {"prompt_id": prompt["id"]}
@@ -145,6 +157,33 @@ class Engine:
         self.room.emit(
             "divergence", {**base, "state": "done", "score": round(score, 4), "method": method}
         )
+
+    def _maybe_fall_back(self, prompt: dict[str, Any], answers: list[dict[str, Any]]) -> bool:
+        """Re-ask the whole round on the fallback model when any answer ended failed.
+
+        Once per prompt, and never after a pick, since the answers would change under the
+        grading room. Nothing awaits between the check and the emit, so it fires once.
+        """
+        fallback = self.cfg.fallback_model
+        failed = [a["subject_id"] for a in answers if a["state"] == "failed"]
+        if not fallback or not failed or prompt["id"] in self.room.fallbacks:
+            return False
+        if prompt["id"] in self.room.picked():
+            log.warning("prompt %s already picked, so its failed answers stay", prompt["id"])
+            return False
+        self.room.emit("fallback", {"prompt_id": prompt["id"], "model": fallback, "failed": failed})
+        log.warning(
+            "prompt %s: %d of %d answers failed, so the round moves to %s",
+            prompt["id"],
+            len(failed),
+            len(answers),
+            fallback,
+        )
+        for subject in self.room.subjects:
+            base = {"prompt_id": prompt["id"], "subject_id": subject["id"]}
+            self.room.emit("answer", {**base, "state": "queued"})
+            self._spawn(self._answer(prompt, subject))
+        return True
 
     def set_phase(self, phase: str) -> None:
         if phase not in PHASES:
@@ -206,8 +245,10 @@ class Engine:
         return len(cut)
 
     async def drain(self) -> None:
-        while self._tasks:
-            await asyncio.gather(*list(self._tasks), return_exceptions=True)
+        # A finished task leaves `_tasks` a loop turn late, and gathering only finished
+        # tasks never yields, so a round that respawns its answers would spin here.
+        while pending := [t for t in self._tasks if not t.done()]:
+            await asyncio.gather(*pending, return_exceptions=True)
 
 
 def _transient(err: Exception) -> bool:
