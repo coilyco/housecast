@@ -229,6 +229,26 @@ def test_more_retries_ride_out_a_route_that_answers_429_a_few_times() -> None:
     assert run(2) == {"done"}
 
 
+def test_a_reply_with_only_reasoning_is_empty_asked_again_and_never_shown(tmp_path: Path) -> None:
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        if request.url.path == "/v1/systemone":
+            return httpx.Response(200, json={"answers": {"divergence": {"score": 2.0}}})
+        calls += 1
+        message = {"content": "\n\n", "reasoning_content": "PRIVATE chain of thought"}
+        return httpx.Response(200, json={"choices": [{"message": message}]})
+
+    log = tmp_path / "room.jsonl"
+    room = Room(subjects=SUBJECTS[:1], log_path=log)
+    asyncio.run(ask(room, httpx.MockTransport(handle)))
+    [answer] = room.snapshot("presenter")["answers"]
+    assert answer["state"] == "empty" and "text" not in answer
+    assert calls == 2  # asked once more
+    assert "PRIVATE" not in log.read_text() + json.dumps(room.snapshot("presenter"))
+
+
 def test_route_limits_parse_and_bad_values_are_refused() -> None:
     assert parse_route_limits("") == {}
     assert parse_route_limits("chat/glm-5-3=4, other=8,") == {"chat/glm-5-3": 4, "other": 8}
