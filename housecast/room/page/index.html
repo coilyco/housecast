@@ -146,7 +146,7 @@ function pastCase(r, now) {
   const prompt = promptById(room, r.prompt_id);
   const answers = room.subjects.map((s) => V.answerCard(room, r.prompt_id, s, now)).join("");
   const title = `case ${r.n}${prompt?.commitment ? `: ${escapeHtml(prompt.commitment)}` : ""}`;
-  return `<details class="past" data-n="${r.n}"${openCases.has(String(r.n)) ? " open" : ""}>
+  return `<details class="past" data-n="${r.n}">
     <summary>${title}</summary>
     ${V.caseCard(prompt)}
     <h3>The four answers</h3>
@@ -157,11 +157,13 @@ function pastCase(r, now) {
 }
 
 function renderPast(now) {
-  $("past-live-text").textContent = liveText();
+  const said = liveText();
+  if ($("past-live-text").textContent !== said) $("past-live-text").textContent = said;
   $("past-live").dataset.attention = room.phase === "grading" || room.phase === "submissions" ? "true" : "";
   V.setHtml($("past-eval"), V.evalTable(room));
   const done = room.rounds.filter((r) => r.split).sort((a, b) => b.n - a.n);
   V.setHtml($("past-list"), done.length ? done.map((r) => pastCase(r, now)).join("") : `<p class="dim">No case has a result yet.</p>`);
+  for (const d of $("past-list").querySelectorAll("details")) d.open = openCases.has(d.dataset.n);
 }
 
 function show(phase) {
@@ -385,6 +387,7 @@ function goTo(next) {
   view = next;
   render();
   window.scrollTo(0, 0);
+  $(next === "live" ? "tab-live" : "tab-past").focus();
 }
 $("tab-live").addEventListener("click", () => goTo("live"));
 $("tab-past").addEventListener("click", () => goTo("past"));

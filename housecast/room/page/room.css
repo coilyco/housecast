@@ -297,6 +297,7 @@ p { margin: 0; }
 .livebar { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.6rem 0.8rem; border: 2px solid var(--focus); border-radius: 12px; background: var(--card); }
 .livebar[data-attention="true"] { border-color: var(--pass); }
 .livebar button { min-height: 2.6rem; padding: 0 1rem; border: 0; border-radius: 10px; background: var(--focus); color: var(--deep); font-weight: 700; }
-.past { border: 1px solid var(--line); border-radius: 12px; padding: 0.7rem 0.9rem; margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.7rem; }
-.past summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.past { border: 1px solid var(--line); border-radius: 12px; padding: 0.7rem 0.9rem; margin-top: 0.7rem; }
+.past > * + * { margin-top: 0.7rem; }
+.past summary { cursor: pointer; padding: 0.5rem 0; min-height: 2.75rem; font-weight: 600; overflow-wrap: anywhere; }
 .past h3 { margin: 0; font-size: 1rem; color: var(--dim); }
