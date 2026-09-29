@@ -79,6 +79,8 @@
     <div id="split-case"></div>
     <p class="dim">For each agent, the share of the room that graded PASS, and how many graders agreed.</p>
     <div class="split" id="split-bars"></div>
+    <h2 class="closing__sub">The four answers</h2>
+    <div class="answers" id="split-answers"></div>
   </section>
 
   <!-- closing: the eval, case by agent -->
@@ -246,6 +248,9 @@ function renderSplit() {
   V.setHtml($("split-case"), V.caseCard(prompt));
   const bars = last ? V.split(room, last.n, { tall: 12 }) : null;
   V.setHtml($("split-bars"), bars ?? `<p class="dim">The results show as soon as the presenter closes grading.</p>`);
+  // The room talks about the answers here, so they are read-only under the bars, as in Past cases.
+  const shown = last?.prompt_id ?? room.round.prompt_id;
+  V.setHtml($("split-answers"), room.subjects.map((s) => V.answerCard(room, shown, s, Date.now())).join(""));
 }
 
 function renderClosing() {
