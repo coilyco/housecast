@@ -5,9 +5,9 @@
 
 const PHASES = ["holding", "submissions", "grading", "split", "closing"];
 const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades"];
-/** Pro-route timings measured in #8166, used to say when a subject runs long. */
-const TYPICAL_S = 15;
-const SLOW_S = 43;
+// A slow route is normal: the bar fills over a minute, and only 100s or more worries.
+const SLOW_S = 60;
+const LONG_S = 100;
 const PROMPT_MAX = 280;
 const REASON_MAX = 140;
 const COMMITMENT_MAX = 140;
@@ -361,6 +361,6 @@ function connect(onRoom, onLink, options) {
 
 window.Room = {
   connect, answerFor, promptById, splitFor, lookOf, seconds, escapeHtml, device, postJson,
-  PHASES, TYPICAL_S, SLOW_S, PROMPT_MAX, REASON_MAX, COMMITMENT_MAX, RUBRIC, RUBRIC_FAIL, agreement, evalRows, talkFor,
+  PHASES, SLOW_S, LONG_S, PROMPT_MAX, REASON_MAX, COMMITMENT_MAX, RUBRIC, RUBRIC_FAIL, agreement, evalRows, talkFor,
 };
 })();

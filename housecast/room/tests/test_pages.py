@@ -95,3 +95,10 @@ def test_no_run_status_reads_like_a_grade() -> None:
     for name in ("views.js", "present.html", "screen.html", "index.html"):
         text = (PAGE / name).read_text(encoding="utf-8")
         assert "✕ failed" not in text and 'failed: "failed"' not in text, name
+
+
+def test_a_slow_answer_is_never_called_slow_or_usual() -> None:
+    """A slow route is normal, so no card claims a usual time or calls the wait a fault."""
+    for name in ("views.js", "room.js"):
+        text = (PAGE / name).read_text(encoding="utf-8")
+        assert "slower than usual" not in text and "Usually about" not in text, name
