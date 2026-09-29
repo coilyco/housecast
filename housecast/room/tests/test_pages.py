@@ -46,3 +46,35 @@ def test_no_glyph_stands_in_for_a_logo() -> None:
     """A persona is its creature or only its name, so no page draws an emoji or shape for it."""
     for name in ("room.js", "views.js", "room.css", "index.html", "screen.html", "present.html"):
         assert "emblem" not in (PAGE / name).read_text(encoding="utf-8"), name
+
+
+def test_the_look_back_can_only_read() -> None:
+    """Past cases hold no form, input, or grade button, in markup or in its script."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    start = html.index('id="past"')
+    markup = html[start : html.index("</section>", start)]
+    script = html[html.index("function pastCase") : html.index("function show(phase)")]
+    forbidden = (
+        "<form",
+        "<input",
+        "<textarea",
+        "<select",
+        "contenteditable",
+        "data-verdict",
+        "api/",
+        "fetch(",
+        "postjson(",
+        "sendgrade(",
+        "postgrades(",
+        "gradecontrols(",
+    )
+    for part in (markup, script):
+        for writable in forbidden:
+            assert writable not in part.lower(), writable
+    assert markup.count("<button") == 1 and 'id="past-back"' in markup
+    # An answer card takes grade controls as a fifth argument. The look-back passes none.
+    assert script.count("answerCard(") == 1
+    assert "V.answerCard(room, r.prompt_id, s, now)" in script
+    # The past view is chosen before any grading render, so no grade button is drawn.
+    render = html[html.index("function render()") :]
+    assert render.index('view === "past"') < render.index("renderGrading(now)")
