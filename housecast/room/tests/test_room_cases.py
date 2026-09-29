@@ -149,6 +149,7 @@ def test_prepared_text_and_commitment_are_withheld_until_picked() -> None:
             "id": case.json()["id"],
             "seq": 1,
             "commitment": "",
+            "source": "prepared",
             "at": views["attendee"][0]["at"],
         }
         assert views["attendee"][0] == withheld
@@ -159,8 +160,9 @@ def test_prepared_text_and_commitment_are_withheld_until_picked() -> None:
         assert views["attendee"][1]["text"] == "attendee says"
         assert views["attendee"][1]["commitment"] == "theirs"
         assert "text" not in views["screen"][1] and views["screen"][1]["commitment"] == ""
-        # Only the presenter learns the source, and sees everything.
-        assert all("source" not in p for v in ("attendee", "screen") for p in views[v])
+        # Every view learns the source, so a page can tell a case from a proposal.
+        assert [p["source"] for p in views["attendee"]] == ["prepared", "attendee", "prepared"]
+        assert [p["source"] for p in views["screen"]] == ["prepared", "attendee", "prepared"]
         assert views["presenter"][0]["text"] == "secret case"
         assert views["presenter"][0]["commitment"] == "secret"
         assert views["presenter"][0]["source"] == "prepared"
@@ -174,7 +176,7 @@ def test_prepared_text_and_commitment_are_withheld_until_picked() -> None:
         }
     for shown in picked.values():
         assert shown["text"] == "secret case" and shown["commitment"] == "secret"
-        assert "source" not in shown
+        assert shown["source"] == "prepared"
 
 
 def test_a_log_from_before_commitments_replays_as_an_attendee_prompt(tmp_path: Path) -> None:
@@ -199,6 +201,7 @@ def test_a_log_from_before_commitments_replays_as_an_attendee_prompt(tmp_path: P
         "seq": 1,
         "at": "t",
         "commitment": "",
+        "source": "attendee",
     }
 
 

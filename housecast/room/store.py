@@ -20,8 +20,6 @@ PHASES = ("holding", "submissions", "grading", "split", "closing")
 # Attendees never learn which model is behind a label, so `model` stays out with `system`.
 HIDDEN_SUBJECT_KEYS = frozenset({"system", "model"})
 VIEWS = ("attendee", "screen", "presenter")
-# Only the presenter learns where a prompt came from.
-PRESENTER_ONLY_PROMPT_KEYS = frozenset({"source"})
 
 
 def with_prompt_defaults(data: dict[str, Any]) -> dict[str, Any]:
@@ -137,7 +135,7 @@ class Room:
         """Screen hides unpicked text. A prepared case hides text and commitment from both."""
         if view == "presenter":
             return prompt
-        shown = {k: v for k, v in prompt.items() if k not in PRESENTER_ONLY_PROMPT_KEYS}
+        shown = dict(prompt)
         if prompt["id"] in self.picked():
             return shown
         if view == "screen" or prompt["source"] == "prepared":
