@@ -39,6 +39,7 @@
   <p class="rubric" id="rubric" hidden></p>
   <div class="answers" id="answers" hidden></div>
   <div class="split" id="split" hidden></div>
+  <div id="measure" hidden></div>
   <div id="talk" hidden></div>
   <div id="eval" hidden></div>
   <p class="dim" id="foot"></p>
@@ -100,7 +101,7 @@ function lengthClass(text) {
 }
 
 function only(...ids) {
-  for (const id of ["join", "cast", "rubric", "answers", "split", "talk", "eval"]) $(id).hidden = !ids.includes(id);
+  for (const id of ["join", "cast", "rubric", "answers", "split", "measure", "talk", "eval"]) $(id).hidden = !ids.includes(id);
 }
 
 function render() {
@@ -156,9 +157,10 @@ function render() {
     $("title").dataset.len = lengthClass(prompt?.text);
     $("lead").textContent = "Share of the room grading PASS, and how many graders agreed.";
     V.setHtml($("split"), (last && V.split(room, last.n, { tall: 22 })) ?? "");
+    V.setHtml($("measure"), last ? V.measure(room, last.prompt_id) : "");
     V.setHtml($("talk"), V.talkCard(room));
     $("foot").textContent = "";
-    only("split", "talk");
+    only("split", "measure", "talk");
   } else if (room.phase === "closing") {
     eyebrow.textContent = "the eval, this session";
     eyebrow.classList.add("eyebrow--closing");
