@@ -135,6 +135,21 @@ def test_a_used_log_is_refused_before_any_grade_is_sent(tmp_path: Path) -> None:
     assert result["failures"] == ["the room already has 1 rounds. Start it on an empty log"]
 
 
+def test_an_answer_of_only_markup_is_counted_as_empty(tmp_path: Path) -> None:
+    served = Served(tmp_path / "room.jsonl", free_port(), stub(blank="you are three")).start()
+    try:
+        code = _load().main(
+            argv(served, tmp_path, "--rounds", "1", "--clients", "4", "--allow-failed-answers", "4")
+        )
+    finally:
+        served.stop()
+    result = report(tmp_path)
+    per = result["rounds"][0]["answers"]["per_subject"]
+    assert code == 0 and per["Amber"]["empty"] == 4 and per["Amber"]["done"] == 0
+    assert all(row["empty"] == 0 for name, row in per.items() if name != "Amber")
+    assert "round 1: Amber gave 4 empty answers" in result["findings"]
+
+
 def test_the_token_file_must_be_private(tmp_path: Path) -> None:
     module = _load()
     path = tmp_path / "token"

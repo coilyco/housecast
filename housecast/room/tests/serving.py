@@ -28,9 +28,12 @@ TOKEN = "room-test-token"
 
 
 def stub(
-    delay: float = 0.0, fail: str | None = None, fail_model: str | None = None
+    delay: float = 0.0,
+    fail: str | None = None,
+    fail_model: str | None = None,
+    blank: str | None = None,
 ) -> httpx.MockTransport:
-    """A model route that answers every subject, optionally slowly, or 429s a prompt or model."""
+    """A model route that answers every subject, optionally slowly, 429s, or sends only markup."""
 
     async def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
@@ -40,7 +43,8 @@ def stub(
         await asyncio.sleep(delay)
         if system == fail or body["model"] == fail_model:
             return httpx.Response(429)
-        return httpx.Response(200, json={"choices": [{"message": {"content": f"re: {system}"}}]})
+        text = "<tool_calls>\n\n</tool_calls>" if system == blank else f"re: {system}"
+        return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
 
     return httpx.MockTransport(handle)
 

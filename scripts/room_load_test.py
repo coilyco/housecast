@@ -310,6 +310,7 @@ class Run:
             per[label] = {
                 "answers": len(mine),
                 "done": sum(1 for a in mine if a["state"] == "done"),
+                "empty": sum(1 for a in mine if a["state"] == "empty"),
                 "not_done": reasons,
                 "queue_s": spread([when(a["started_at"]) - at[a["prompt_id"]] for a in timed]),
                 "run_s": spread([when(a["finished_at"]) - when(a["started_at"]) for a in timed]),
@@ -473,6 +474,9 @@ class Run:
         record["answers"] = self.measure(snap, ids)
         record["answers"]["settled_s"] = round(waited, 1)
         record["answers"]["waited_out"] = record["answers"]["stuck"] > 0
+        for label, per in record["answers"]["per_subject"].items():
+            if per["empty"]:
+                self.findings.append(f"round {n}: {label} gave {per['empty']} empty answers")
         watcher = self.feeds[0]
         await watcher.until(lambda: watcher.rev >= snap["rev"], self.args.swap_timeout)
         record["fallbacks"] = len(set(ids) & watcher.fallbacks)
