@@ -50,6 +50,7 @@
   <header class="bar">
     <p class="eyebrow eyebrow--live" id="phase-label"></p>
     <button class="next" id="next" type="button"></button>
+    <button class="next" id="pick-next" type="button" hidden></button>
     <label class="dim">Jump to
       <select id="jump" aria-label="Jump the room to a phase"></select>
     </label>
@@ -194,6 +195,12 @@ function renderIncoming() {
     : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add prepared ones above, or open proposals." : "No cases yet. Paste one above."}</li>`);
 }
 
+/** The next case not yet picked, in the order the list shows, so stepping through is one click. */
+function nextInLine() {
+  const left = sortedPrompts().filter((p) => !isUsed(p.id));
+  return { next: left[0] ?? null, left: left.length };
+}
+
 /** What picking the selected prompt would do, so the bar and the panel say the same thing. */
 function isUsed(id) {
   return room.round.prompt_id === id || room.rounds.some((r) => r.prompt_id === id);
@@ -302,6 +309,12 @@ function render() {
   $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label;
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
+  const { next: upNext, left } = nextInLine();
+  const answering = upNext && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, upNext.id, s.id).state));
+  $("pick-next").hidden = !["holding", "submissions", "split"].includes(room.phase) || !upNext;
+  $("pick-next").disabled = Boolean(answering);
+  $("pick-next").textContent = answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`;
+  $("pick-next").title = upNext ? oneLine(upNext.text) : "";
   V.setHtml($("jump"), PHASES.map((p) => `<option value="${p}"${p === room.phase ? " selected" : ""}>${p}</option>`).join(""));
   if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
@@ -360,6 +373,12 @@ $("next").addEventListener("click", () => {
   if (room.phase === "closing" && screenChannel) return toggleCloser();
   const next = NEXT[room.phase];
   if (next.to) void control("phase", { phase: next.to });
+});
+$("pick-next").addEventListener("click", () => {
+  const { next: upNext } = nextInLine();
+  if (!upNext) return;
+  selected = upNext.id;
+  void control("pick", { prompt_id: upNext.id });
 });
 $("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
 $("jump").addEventListener("change", (event) => {
