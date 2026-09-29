@@ -11,8 +11,8 @@ characters, and a longer one answers 422 `{reason: "the commitment is over 140
 characters"}`. Intake still needs the submissions phase and the rate limits.
 
 `POST /api/control/cases` takes `{text, commitment}` with `X-Control-Token`.
-It answers 201 `{id, seq}` or 422 `{reason}` with the same 280-character text
-rule, works in every phase, and sits outside the rate and burst limits. The
+It answers 201 `{id, seq}` or 422 `{reason}`, takes up to 2000 characters of text (attendee
+prompts stay at 280) with inner newlines kept, works in every phase, and sits outside the rate and burst limits. The
 prompt fans out and scores like an attendee one, marked `prepared`.
 
 ## What each view sees
