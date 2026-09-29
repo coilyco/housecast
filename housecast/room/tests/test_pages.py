@@ -180,3 +180,15 @@ def test_the_presenter_can_step_to_the_next_unpicked_case_in_one_click() -> None
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert 'id="pick-next"' in present and "function nextInLine()" in present
     assert "sortedPrompts().filter((p) => !isUsed(p.id))" in present
+
+
+def test_the_presenter_can_run_a_case_again_or_delete_it_and_pages_hear_a_delete() -> None:
+    """The site is the pressure test, so a case is run and deleted from the page, not by hand."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    room = (PAGE / "room.js").read_text(encoding="utf-8")
+    assert 'id="case-run"' in present and 'id="case-delete"' in present
+    assert (
+        "`cases/${selected}/run`" in present
+        and 'control(`cases/${selected}`, undefined, "DELETE")' in present
+    )
+    assert '"removed"' in room and 'method === "DELETE"' in room

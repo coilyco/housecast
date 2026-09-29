@@ -42,6 +42,8 @@ class Room:
     divergence: dict[str, dict[str, Any]] = field(default_factory=dict)
     # prompt_id -> the fallback event's data. Its `model` is what a restart resumes with.
     fallbacks: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Deleted ids. A late answer for one is dropped, so a replay never revives it.
+    removed: set[str] = field(default_factory=set)
     rounds: list[dict[str, Any]] = field(default_factory=list)
     # (round n, device) -> {subject_id: {"verdict", "reason"?}}
     grades: dict[tuple[int, str], dict[str, dict[str, str]]] = field(default_factory=dict)
@@ -87,9 +89,25 @@ class Room:
         if kind == "prompt":
             self.prompts.append(with_prompt_defaults(data))
         elif kind == "answer":
-            self.answers[(data["prompt_id"], data["subject_id"])] = data
+            if data["prompt_id"] not in self.removed:
+                self.answers[(data["prompt_id"], data["subject_id"])] = data
         elif kind == "divergence":
-            self.divergence[data["prompt_id"]] = data
+            if data["prompt_id"] not in self.removed:
+                self.divergence[data["prompt_id"]] = data
+        elif kind == "removed":
+            gone = data["prompt_id"]
+            self.removed.add(gone)
+            self.prompts = [p for p in self.prompts if p["id"] != gone]
+            self.answers = {k: v for k, v in self.answers.items() if k[0] != gone}
+            self.divergence.pop(gone, None)
+            self.fallbacks.pop(gone, None)
+        elif kind == "rerun":
+            # The fallback may fire again for the new round, so the old mark goes.
+            self.fallbacks.pop(data["prompt_id"], None)
+            self.divergence[data["prompt_id"]] = {
+                "prompt_id": data["prompt_id"],
+                "state": "pending",
+            }
         elif kind == "fallback":
             # One event re-queues the whole round, so a crash cannot leave it mixed.
             self.fallbacks[data["prompt_id"]] = data

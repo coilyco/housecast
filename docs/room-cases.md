@@ -15,6 +15,15 @@ It answers 201 `{id, seq}` or 422 `{reason}`, takes up to 2000 characters of tex
 prompts stay at 280) with inner newlines kept, works in every phase, and sits outside the rate and burst limits. The
 prompt fans out and scores like an attendee one, marked `prepared`.
 
+`DELETE /api/control/cases/{id}` takes the same token and removes a case that no round has picked, with its
+answers and divergence. It answers 200 `{id}`, 404 for an unknown id, and 409 once the case is in a round. The log
+records a `removed` event, so a restart replays the deletion, and a new case takes the next free `seq`.
+
+`POST /api/control/cases/{id}/run` asks the case's four subjects again and scores it again, for a model or route
+change. It answers 202 `{id}`, 404 for an unknown id, and 409 for a case in a round or one still answering. The log
+records a `rerun` event, and the new answers and divergence land in the same log the presentation reads. /present
+shows both as "Run this case again" and "Delete this case" on the selected case.
+
 ## What each view sees
 
 - **presenter** - everything.
