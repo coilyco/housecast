@@ -2,8 +2,11 @@ import json
 import pathlib
 
 import pytest
+from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
+from housecast.grade import present as present_mod
+from housecast.grade.cli import main as cli_main
 from housecast.grade.deck import DECK_FORMAT, WITHHELD, build_from_dirs
 from housecast.grade.deck import load as load_deck
 from housecast.grade.export import ExportRefusedError
@@ -285,3 +288,46 @@ def test_a_mounted_page_does_not_shadow_the_api(show: Presentation, tmp_path: pa
     client = TestClient(create_app(show, static))
     assert "the room page" in client.get("/").text
     assert client.get("/api/state").json()["state"] == "commitments"
+
+
+def serve_deck(
+    built: dict[str, object],
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    args: list[str],
+) -> tuple[str, Presentation]:
+    """Runs `grade present` with the server stubbed out, so it returns what the run printed."""
+    path = tmp_path / "deck.json"
+    path.write_text(json.dumps(built))
+    served: list[Presentation] = []
+    monkeypatch.setattr(
+        present_mod, "present", lambda show, host, port, static: served.append(show)
+    )
+    result = CliRunner().invoke(cli_main, ["present", str(path), *args])
+    assert result.exit_code == 0, result.output
+    return result.output, served[0]
+
+
+def test_a_supplied_control_token_is_used_and_never_printed(
+    built: dict[str, object], tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    output, show = serve_deck(built, tmp_path, monkeypatch, ["--control-token", "from-a-secret"])
+    assert show.control_token == "from-a-secret"
+    assert "from-a-secret" not in output
+
+
+def test_the_control_token_can_come_from_the_environment(
+    built: dict[str, object], tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PRESENT_CONTROL_TOKEN", "from-the-env")
+    output, show = serve_deck(built, tmp_path, monkeypatch, [])
+    assert show.control_token == "from-the-env"
+    assert "from-the-env" not in output
+
+
+def test_a_minted_control_token_is_still_printed_for_the_presenter(
+    built: dict[str, object], tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("PRESENT_CONTROL_TOKEN", raising=False)
+    output, show = serve_deck(built, tmp_path, monkeypatch, [])
+    assert f"presenter control token: {show.control_token}" in output
