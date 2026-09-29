@@ -8,8 +8,11 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import pytest
+from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
+from housecast.room.cli import room as room_cli
 from housecast.room.engine import MAX_CASE, MAX_COMMITMENT, MAX_PROMPT
 from housecast.room.server import create_app
 from housecast.room.store import Room
@@ -243,6 +246,40 @@ def test_a_prepared_case_takes_2000_characters_and_every_newline(tmp_path: Path)
     again = Room(subjects=SUBJECTS, log_path=log)
     again.load()
     assert again.prompts[0]["text"] == text  # a restart replays them unchanged
+
+
+def test_attendee_prompts_off_refuses_with_403_and_leaves_presenter_cases_alone() -> None:
+    room = Room(subjects=SUBJECTS)
+    upstream = httpx.AsyncClient(transport=proxy({s["system"]: s["label"] for s in SUBJECTS}))
+    app = create_app(room, CFG, "tok", client=upstream, page=None, attendee_prompts=False)
+    with TestClient(app) as tc:
+        open_room(tc)
+        refused = tc.post("/api/prompts", json={"text": "a proposal", "device": "1"})
+        case = tc.post(CASES, json={"text": "a case"}, headers=HEADERS)
+        again = tc.post("/api/prompts", json={"text": "still no", "device": "2"})
+    assert refused.status_code == again.status_code == 403
+    assert refused.json() == {"reason": "attendee prompts are off"}
+    assert case.status_code == 201
+    assert [(p["text"], p["source"]) for p in room.prompts] == [("a case", "prepared")]
+
+
+def test_the_cli_reads_attendee_prompts_from_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[bool] = []
+    monkeypatch.setattr("housecast.room.cli.serve", lambda *args: seen.append(args[-1]))
+    subjects = tmp_path / "subjects.json"
+    subjects.write_text(json.dumps([{"id": "a", "label": "A", "system": "x"}]))
+    args = ["serve", "--subjects", str(subjects), "--log", str(tmp_path / "log")]
+    for env, want in (
+        ({}, True),
+        ({"ROOM_ATTENDEE_PROMPTS": "on"}, True),
+        ({"ROOM_ATTENDEE_PROMPTS": "off"}, False),
+    ):
+        assert CliRunner().invoke(room_cli, args, env=env).exit_code == 0
+        assert seen[-1] is want
+    bad = CliRunner().invoke(room_cli, args, env={"ROOM_ATTENDEE_PROMPTS": "maybe"})
+    assert bad.exit_code != 0 and "maybe" in bad.output
 
 
 def test_an_attendee_prompt_is_still_capped_at_280() -> None:

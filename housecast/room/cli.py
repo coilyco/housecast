@@ -61,6 +61,14 @@ def room() -> None:
 )
 @click.option("--jev-model", envvar="ROOM_JEV_MODEL", default="jev-1.13.0", show_default=True)
 @click.option(
+    "--attendee-prompts",
+    envvar="ROOM_ATTENDEE_PROMPTS",
+    type=click.Choice(["on", "off"]),
+    default="on",
+    show_default=True,
+    help="off makes POST /api/prompts answer 403. Presenter cases still work",
+)
+@click.option(
     "--route-limits",
     envvar="ROOM_ROUTE_LIMITS",
     default="",
@@ -120,6 +128,7 @@ def serve_cmd(
     model: str,
     fallback_model: str | None,
     jev_model: str,
+    attendee_prompts: str,
     route_limits: str,
     retries: int,
     user_tag: str,
@@ -164,4 +173,5 @@ def serve_cmd(
         devices_per_address,
         trusted_hops,
         client_header,
+        attendee_prompts == "on",
     )
