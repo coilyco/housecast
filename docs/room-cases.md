@@ -1,7 +1,7 @@
 # Commitments and prepared cases
 
-Every prompt carries a `commitment` (empty string when absent) and, for the
-presenter only, a `source` of `attendee` or `prepared`. Spec:
+Every prompt carries a `commitment` (empty string when absent) and a `source`
+of `attendee` or `prepared`, in every view. Spec:
 `teable:coilyco/housecast#8494`.
 
 ## Endpoints
@@ -17,9 +17,10 @@ prompt fans out and scores like an attendee one, marked `prepared`.
 
 ## What each view sees
 
-- **presenter** - everything, including `source`.
-- **attendee and screen** - no `source`. A prepared prompt's `text` is omitted
-  and its `commitment` is `""` until it is picked, in snapshots and the stream.
+- **presenter** - everything.
+- **attendee and screen** - a prepared prompt's `text` is omitted and its
+  `commitment` is `""` until it is picked, in snapshots and the stream. `source`
+  stays, so a page can count prepared cases apart from proposals.
 - **screen** - an unpicked attendee prompt loses its text and, with it, its
   commitment. The attendee view shows both.
 
