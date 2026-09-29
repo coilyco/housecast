@@ -2,7 +2,7 @@
 // same on a phone, the shared screen, and the presenter's surface.
 (() => {
 "use strict";
-const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, talkFor, TYPICAL_S, SLOW_S } = window.Room;
+const { answerFor, lookOf, seconds, escapeHtml, splitFor, agreement, evalRows, talkFor, SLOW_S, LONG_S } = window.Room;
 
 function who(room, subject) {
   const look = lookOf(room, subject);
@@ -35,9 +35,9 @@ function stateOf(answer, now) {
       return { text: "waiting to start" };
     case "running": {
       const s = answer.started_at ? seconds(answer.started_at, now) : 0;
-      return s > SLOW_S
-        ? { text: `⏱ thinking ${s}s, slower than usual`, tone: "trouble", progress: 1 }
-        : { text: `thinking ${s}s`, progress: Math.min(s / SLOW_S, 1) };
+      // Calm until an answer is close to its limit: a long wait is not a fault.
+      if (s > LONG_S) return { text: `still thinking ${s}s`, tone: "trouble", progress: 1 };
+      return { text: s > SLOW_S ? `still thinking ${s}s` : `thinking ${s}s`, progress: Math.min(s / SLOW_S, 1) };
     }
     case "done": {
       const s = answer.started_at && answer.finished_at ? seconds(answer.started_at, Date.parse(answer.finished_at)) : null;
@@ -63,7 +63,7 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
     body = `<p class="answer__reason">${escapeHtml(why)}</p>`;
   }
   else if (answer.state === "running" || answer.state === "queued")
-    body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason">Usually about ${TYPICAL_S}s.</p>` : ""}`;
+    body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason">Some answers take a minute or more.</p>` : ""}`;
   const look = lookOf(room, subject);
   const intro = about && look.role ? `<p class="answer__about"><b>${escapeHtml(look.role)}</b><span>${escapeHtml(look.line)}</span></p>` : "";
   return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${look.color}" aria-label="${escapeHtml(subject.label)}">
