@@ -7,12 +7,14 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
+import click
 import httpx
 import pytest
 from click.testing import CliRunner
 from fastapi.testclient import TestClient
 
 from housecast.room import models
+from housecast.room.cli import parse_route_limits
 from housecast.room.cli import room as room_cli
 from housecast.room.engine import Engine
 from housecast.room.server import create_app
@@ -173,6 +175,88 @@ def test_the_raw_text_of_an_empty_reply_is_logged_and_shown_nowhere(tmp_path: Pa
     replayed = Room(subjects=SUBJECTS[:2], log_path=log)
     replayed.load()  # replay skips the note
     assert replayed.rev == room.rev and replayed.snapshot("presenter") == room.snapshot("presenter")
+
+
+def test_a_route_limit_caps_answers_in_flight_on_that_route() -> None:
+    live = peak = 0
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal live, peak
+        if request.url.path == "/v1/systemone":
+            return httpx.Response(200, json={"answers": {"divergence": {"score": 2.0}}})
+        live += 1
+        peak = max(peak, live)
+        await asyncio.sleep(0.02)
+        live -= 1
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    cfg = models.Settings(proxy="http://proxy", model="route", jev_model="jev")
+    capped = models.Settings(**{**cfg.__dict__, "route_limits": {"route": 2}})
+
+    async def go(settings: models.Settings) -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            engine = Engine(Room(subjects=SUBJECTS), settings, client)
+            engine.set_phase("submissions")
+            for i in range(3):
+                engine.submit(f"question {i}")
+            await engine.drain()
+            states = {a["state"] for a in engine.room.snapshot("presenter")["answers"]}
+            assert states == {"done"}
+
+    asyncio.run(go(capped))
+    assert peak == 2
+    peak = 0
+    asyncio.run(go(cfg))
+    assert peak > 2  # no limit set, so nothing holds the route back
+
+
+def test_more_retries_ride_out_a_route_that_answers_429_a_few_times() -> None:
+    def flaky(seen: list[str]) -> Callable[[str, str], Reply]:
+        def replies(_model: str, system: str) -> Reply:
+            seen.append(system)
+            return 429 if seen.count(system) <= 2 else "ok"
+
+        return replies
+
+    def run(retries: int) -> set[str]:
+        transport, _calls = routed(flaky([]))
+        room = Room(subjects=SUBJECTS[:2])
+        cfg = models.Settings(proxy="http://proxy", model="route", jev_model="jev", retries=retries)
+        asyncio.run(ask(room, transport, cfg))
+        return {a["state"] for a in room.snapshot()["answers"]}
+
+    assert run(1) == {"failed"}  # the default retries once, and two 429s is one too many
+    assert run(2) == {"done"}
+
+
+def test_a_reply_with_only_reasoning_is_empty_asked_again_and_never_shown(tmp_path: Path) -> None:
+    calls = 0
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        if request.url.path == "/v1/systemone":
+            return httpx.Response(200, json={"answers": {"divergence": {"score": 2.0}}})
+        calls += 1
+        message = {"content": "\n\n", "reasoning_content": "PRIVATE chain of thought"}
+        return httpx.Response(200, json={"choices": [{"message": message}]})
+
+    log = tmp_path / "room.jsonl"
+    room = Room(subjects=SUBJECTS[:1], log_path=log)
+    asyncio.run(ask(room, httpx.MockTransport(handle)))
+    [answer] = room.snapshot("presenter")["answers"]
+    assert answer["state"] == "empty" and "text" not in answer
+    assert calls == 2  # asked once more
+    assert "PRIVATE" not in log.read_text() + json.dumps(room.snapshot("presenter"))
+
+
+def test_route_limits_parse_and_bad_values_are_refused() -> None:
+    assert parse_route_limits("") == {}
+    assert parse_route_limits("chat/glm-5-3=4, other=8,") == {"chat/glm-5-3": 4, "other": 8}
+    for bad in ("chat/glm-5-3", "chat/glm-5-3=0", "=4", "x=y"):
+        with pytest.raises(click.BadParameter):
+            parse_route_limits(bad)
+    with pytest.raises(ValueError, match="route limit"):
+        models.Settings(proxy="p", model="m", jev_model="j", route_limits={"m": 0})
 
 
 def test_a_failing_fallback_does_not_switch_again() -> None:
