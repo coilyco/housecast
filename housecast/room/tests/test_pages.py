@@ -49,10 +49,17 @@ def test_no_glyph_stands_in_for_a_logo() -> None:
 
 
 def test_the_look_back_can_only_read() -> None:
-    """Past cases hold no form, input, or grade button, in its markup or the script that fills it."""
+    """Past cases hold no form, input, or grade button, in markup or in its script."""
     html = (PAGE / "index.html").read_text(encoding="utf-8")
     markup = html[html.index('id="past"') : html.index("</section>", html.index('id="past"'))]
     script = html[html.index("function pastCase") : html.index("function show(phase)")]
     for part in (markup, script):
-        for writable in ("<form", "<input", "<textarea", "data-verdict", "api/grades", "api/prompts"):
+        for writable in (
+            "<form",
+            "<input",
+            "<textarea",
+            "data-verdict",
+            "api/grades",
+            "api/prompts",
+        ):
             assert writable not in part, writable
