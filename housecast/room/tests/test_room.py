@@ -146,6 +146,12 @@ def test_intake_refuses_with_a_reason() -> None:
 
 def test_markup_is_stripped_and_lexical_is_bounded() -> None:
     assert models.strip_markup('hi <tool_call>{"x":1}</tool_call> there') == "hi  there"
+    tag = f"{chr(0xFF5C) * 2}DSML{chr(0xFF5C) * 2}"
+    fence = f'<{tag} calls>\n<{tag} invoke name="bash">\n</{tag} invoke>\n</{tag} calls>'
+    assert models.strip_markup(f"Checking. {fence}") == "Checking."
+    assert models.strip_markup(fence) == ""
+    assert models.strip_markup(f"Cut off {fence[:30]}") == "Cut off"
+    assert models.strip_markup("DSML is a markup format.") == "DSML is a markup format."
     assert models.lexical(["a b", "a b"]) == 0.0
     assert models.lexical(["a", "b"]) == 1.0
     assert models.jev_body("p", ["w", "x"], "k", "m") == models.jev_body("p", ["w", "x"], "k", "m")
