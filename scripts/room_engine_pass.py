@@ -94,12 +94,15 @@ def run(pw: Playwright, name: str, base: str, token: str, out: Path) -> Pass:
     box = page.locator("#submit-text")
     box.wait_for(timeout=15000)
     first = f"Engine pass {name} {int(time.time())}: may a hospital let an AI triage patients?"
+    commitment = "An agent says what it does not know"
     box.fill(first)
+    page.locator("#submit-commitment").fill(commitment)
     counted = page.get_by_text(f"{len(first)} / 280").count() > 0
     page.locator("#submit-send").click()
-    page.get_by_text("Sent.", exact=False).wait_for(timeout=15000)
+    page.get_by_text("Proposed.", exact=False).wait_for(timeout=15000)
     second = "And should it explain itself to the patient?"
     box.fill(second)
+    page.locator("#submit-commitment").fill(commitment)
     page.locator("#submit-send").click()
     page.wait_for_timeout(1500)
     refused = page.locator('[data-tone="error"]').count() > 0

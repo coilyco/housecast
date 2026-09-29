@@ -292,7 +292,7 @@ function render() {
   const next = NEXT[room.phase];
   // In closing the primary raises the closer, since going back to holding resets the room.
   const raisesCloser = room.phase === "closing" && Boolean(screenChannel);
-  $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the failing grades" : "Show the closer on the shared screen") : next.label;
+  $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label;
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
   V.setHtml($("jump"), PHASES.map((p) => `<option value="${p}"${p === room.phase ? " selected" : ""}>${p}</option>`).join(""));
