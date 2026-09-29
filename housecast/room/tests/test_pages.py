@@ -28,7 +28,8 @@ def test_every_logo_the_demo_names_exists() -> None:
 # The room is graded against written commitments, so nothing an attendee or the
 # recording can read ranks, scores or competes. /present keeps its own sorting aid.
 COMPETITION = re.compile(
-    r"\b(compete|competing|competition|win|wins|winner|points|leaderboard|rank|arcade)\b"
+    r"\b(compete|competing|competition|competitive|competitor|win|wins|winner|winning|points|"
+    r"leaderboard|scoreboard|rank|ranked|ranking|arcade)\b"
     r"|most split|splits most|split them",
     re.I,
 )
@@ -39,3 +40,9 @@ def test_no_competition_copy_on_an_attendee_or_screen_surface() -> None:
     for name in ROOM_FACING:
         found = COMPETITION.search((PAGE / name).read_text(encoding="utf-8"))
         assert not found, f"{name}: {found.group(0)}"
+
+
+def test_no_glyph_stands_in_for_a_logo() -> None:
+    """A persona is its creature or only its name, so no page draws an emoji or shape for it."""
+    for name in ("room.js", "views.js", "room.css", "index.html", "screen.html", "present.html"):
+        assert "emblem" not in (PAGE / name).read_text(encoding="utf-8"), name

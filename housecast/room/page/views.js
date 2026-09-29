@@ -9,7 +9,7 @@ function who(room, subject) {
   // The logo is decorative: the name beside it is what is announced.
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
-    : `<span class="emblem" aria-hidden="true">${escapeHtml(look.emblem)}</span>`;
+    : "";
   return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
 }
 
@@ -84,7 +84,8 @@ function caseCard(prompt, { withText = true } = {}) {
 /** How many graders gave the majority verdict, said as a count, not a percent. */
 function agreedText(cell) {
   const a = agreement(cell);
-  return a.graded ? `${a.agreed} of ${a.graded} graders agreed` : "no grades";
+  if (!a.graded) return "no grades";
+  return a.verdict === "tied" ? `no majority, ${cell.pass} to ${cell.fail}` : `${a.agreed} of ${a.graded} graders agreed on ${a.verdict.toUpperCase()}`;
 }
 
 /** Each subject's PASS share for round `n`, as bars. Null before the split exists. */
@@ -111,8 +112,8 @@ function evalTable(room) {
   const rows = evalRows(room);
   if (!rows.length) return `<p class="dim">No case has a result yet.</p>`;
   const cell = (c) => {
-    const word = c.verdict === "tied" ? "tied" : c.verdict ? `${c.verdict.toUpperCase()} ${c.share}%` : "no grades";
-    return `<td data-agent="${escapeHtml(c.subject.label)}" data-verdict="${c.verdict ?? "none"}">${word}</td>`;
+    const word = c.silent ? "no answer" : c.verdict === "tied" ? "tied" : c.verdict ? `${c.verdict.toUpperCase()} ${c.share}%` : "no grades";
+    return `<td data-verdict="${c.verdict ?? "none"}"><span class="eval__who">${who(room, c.subject)}</span><span>${word}</span></td>`;
   };
   const head = room.subjects.map((s) => `<th scope="col">${who(room, s)}</th>`).join("");
   const body = rows
@@ -123,8 +124,8 @@ function evalTable(room) {
 
 /** Questions for the room after the latest result. */
 function talkCard(room) {
-  const rows = evalRows(room);
-  const last = rows[rows.length - 1];
+  const newest = room.rounds[room.rounds.length - 1];
+  const last = newest?.split ? evalRows(room).find((r) => r.n === newest.n) : null;
   if (!last) return "";
   const { questions } = talkFor(room, last);
   return `<section class="talk" aria-labelledby="talk-title"><h2 id="talk-title">Talk it through</h2><ul>${questions.map((q) => `<li>${escapeHtml(q)}</li>`).join("")}</ul></section>`;

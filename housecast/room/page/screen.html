@@ -48,7 +48,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { promptById, seconds, RUBRIC, RUBRIC_FAIL, evalRows } = window.Room;
+const { promptById, seconds, RUBRIC, RUBRIC_FAIL } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 const host = location.host;
@@ -73,6 +73,25 @@ window.addEventListener("hashchange", () => {
   closer = location.hash === "#closer";
   render();
 });
+
+/** Shrinks the eval until every case fits its box, so no row is cut off the recording. */
+function fitEval() {
+  const box = $("eval");
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const shrink = (floor) => {
+    for (let px = 1.5 * rem; px > floor && box.scrollHeight > box.clientHeight + 1; px -= 1) box.style.setProperty("--evalfs", `${px}px`);
+  };
+  delete box.dataset.dense;
+  box.style.setProperty("--evalfs", "1.5rem");
+  shrink(12);
+  // Below a readable size the labels drop to one line, which is what a long session needs.
+  if (box.scrollHeight > box.clientHeight + 1) {
+    box.dataset.dense = "1";
+    box.style.setProperty("--evalfs", "1.5rem");
+    shrink(9);
+  }
+}
+window.addEventListener("resize", () => { if (!$("eval").hidden) fitEval(); });
 
 /** A long prompt gets a smaller headline, so the whole case is on the recording. */
 function lengthClass(text) {
@@ -148,7 +167,7 @@ function render() {
     $("lead").textContent = "";
     // The reasons are attendee-typed, so the recording shows the table and Kai reads them aloud.
     V.setHtml($("eval"), V.evalTable(room));
-    $("eval").style.setProperty("--rows", String(Math.max(4, evalRows(room).length + 1)));
+    fitEval();
     $("foot").textContent = "The reasons are on Kai's screen, and she reads them aloud.";
     only("eval");
   }

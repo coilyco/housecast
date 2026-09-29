@@ -370,12 +370,31 @@ function caseNote(text, tone) {
 }
 
 async function addCase(c) {
-  const body = { text: String(c.text ?? "").trim(), commitment: String(c.commitment ?? "").trim() };
+  const clean = (v) => (typeof v === "string" ? v.trim() : "");
+  const body = { text: clean(c.text), commitment: clean(c.commitment) };
   return demo ? { ok: true, body: {} } : postJson("api/control/cases", body, { "X-Control-Token": token }, 1);
 }
 
+/** A case the room already holds is skipped, so loading a file twice adds nothing. */
+function hasCase(text) {
+  const same = (s) => String(s ?? "").trim().toLowerCase();
+  return room.prompts.some((p) => same(p.text) === same(text));
+}
+
+const MAX_CASES = 30;
+let loading = false;
+
+function setLoading(on) {
+  loading = on;
+  $("case-add").disabled = on;
+  $("case-file").disabled = on;
+}
+
 $("case-add").addEventListener("click", async () => {
+  if (loading) return;
+  setLoading(true);
   const result = await addCase({ text: $("case-text").value, commitment: $("case-commit").value });
+  setLoading(false);
   if (result.ok) {
     $("case-text").value = "";
     $("case-commit").value = "";
@@ -387,7 +406,7 @@ $("case-add").addEventListener("click", async () => {
 
 $("case-file").addEventListener("change", async (event) => {
   const file = event.target.files[0];
-  if (!file) return;
+  if (!file || loading) return;
   let list;
   try {
     const parsed = JSON.parse(await file.text());
@@ -398,14 +417,28 @@ $("case-file").addEventListener("change", async (event) => {
     event.target.value = "";
     return;
   }
+  if (list.length > MAX_CASES) {
+    caseNote(`That file has ${list.length} cases. The most this loads at once is ${MAX_CASES}.`, "error");
+    event.target.value = "";
+    return;
+  }
+  setLoading(true);
   const problems = [];
   let added = 0;
+  let skipped = 0;
   for (const [i, c] of list.entries()) {
-    const result = await addCase(c ?? {});
-    if (result.ok) added += 1;
-    else problems.push(`case ${i + 1}: ${result.body.reason ?? result.body.detail ?? result.status}`);
+    caseNote(`Adding case ${i + 1} of ${list.length}.`, "");
+    if (typeof c?.text !== "string" || !c.text.trim()) { problems.push(`case ${i + 1}: no text`); continue; }
+    if (hasCase(c.text)) { skipped += 1; continue; }
+    const result = await addCase(c);
+    if (result.ok) { added += 1; continue; }
+    // A refused token or a dead connection would fail every case, so it stops here.
+    if ([0, 401, 403].includes(result.status)) { problems.push(result.body.reason ?? "the room did not accept the presenter token"); break; }
+    problems.push(`case ${i + 1}: ${result.body.reason ?? result.body.detail ?? result.status}`);
   }
-  caseNote(`Added ${added} of ${list.length}.${problems.length ? ` ${problems.join(". ")}.` : ""}`, problems.length ? "error" : "ok");
+  setLoading(false);
+  const said = `Added ${added} of ${list.length}.${skipped ? ` ${skipped} already there.` : ""}${problems.length ? ` ${problems.join(". ")}.` : ""}`;
+  caseNote(said, problems.length ? "error" : "ok");
   event.target.value = "";
 });
 
