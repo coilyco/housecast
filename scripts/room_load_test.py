@@ -362,14 +362,14 @@ class Run:
         for feed in self.feeds:
             for i, s in enumerate(subject_ids):
                 expected[s]["pass" if (feed.index + i) % 3 else "fail"] += 1
-        ok = all(
-            row["split"][s]["pass"] == expected[s]["pass"]
-            and row["split"][s]["fail"] == expected[s]["fail"]
-            for s in subject_ids
-        )
+        # A real client outside the harness adds one grade per subject of its own.
+        extra = {
+            s: [row["split"][s][k] - expected[s][k] for k in ("pass", "fail")] for s in subject_ids
+        }
+        ok = all(min(e) >= 0 and sum(e) <= self.args.outside_graders for e in extra.values())
         if not ok:
             self.fail(f"round {n}: the split does not match the {len(self.feeds)} grades sent")
-        return {"totals_match": ok, "split": row["split"]}
+        return {"totals_match": ok, "outside_grades": sum(sum(e) for e in extra.values()), "split": row["split"]}
 
     async def checkpoint(self, where: str, n: int) -> dict[str, Any]:
         snap = await self.presenter.snapshot()
@@ -619,6 +619,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--pause-timeout", type=float, default=1800.0)
     p.add_argument("--resume-file", type=Path)
     p.add_argument("--allow-failed-answers", type=int, default=0)
+    p.add_argument("--outside-graders", type=int, default=0, help="real clients that may also grade")
     p.add_argument("--out", type=Path, default=Path("dist/room-load-test"))
     p.add_argument("--writes", action="store_true", help="confirm this room's log may take test prompts")
     return p
