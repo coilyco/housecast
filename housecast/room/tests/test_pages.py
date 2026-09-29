@@ -164,3 +164,10 @@ def test_the_attendee_page_is_one_casebook_column() -> None:
     assert "const [top, ...older] = waiting ? [] : casesNow();" in html
     css = (PAGE / "room.css").read_text(encoding="utf-8")
     assert ".sheet .answer__text { max-height: 12rem; overflow: auto;" in css
+
+
+def test_the_presenter_can_step_to_the_next_unpicked_case_in_one_click() -> None:
+    """Kai curates dozens of prepared cases, so the next one in list order is a single button."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'id="pick-next"' in present and "function nextInLine()" in present
+    assert "sortedPrompts().filter((p) => !isUsed(p.id))" in present
