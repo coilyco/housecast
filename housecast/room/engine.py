@@ -133,7 +133,8 @@ class Engine:
         return switched["model"] if switched else subject.get("model")
 
     async def _call(self, system: str, text: str, model: str | None = None) -> str:
-        """One answer under the deadline, retried once on a transient proxy error."""
+        """One answer under the deadline, retried once on a transient proxy error or on
+        an answer that strips to nothing, a subject that tried to run a command."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.cfg.answer_deadline
         for attempt in (1, 2):
@@ -141,9 +142,11 @@ class Engine:
             if remaining <= 0:
                 raise TimeoutError
             try:
-                return await asyncio.wait_for(
+                answer = await asyncio.wait_for(
                     models.answer(self.client, self.cfg, system, text, model), timeout=remaining
                 )
+                if answer or attempt == 2:
+                    return answer
             except (httpx.TransportError, httpx.HTTPStatusError) as err:
                 if attempt == 2 or not _transient(err):
                     raise
