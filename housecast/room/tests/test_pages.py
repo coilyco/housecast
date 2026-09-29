@@ -173,3 +173,10 @@ def test_the_screen_is_the_same_casebook_without_buttons() -> None:
     assert "V.sheetBody(room, r, { now })" in body
     for gone in ("gradeControls", "data-verdict", "<button", "V.split("):
         assert gone not in screen, gone
+
+
+def test_the_presenter_can_step_to_the_next_unpicked_case_in_one_click() -> None:
+    """Kai curates dozens of prepared cases, so the next one in list order is a single button."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'id="pick-next"' in present and "function nextInLine()" in present
+    assert "sortedPrompts().filter((p) => !isUsed(p.id))" in present
