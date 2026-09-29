@@ -48,46 +48,28 @@ def test_no_glyph_stands_in_for_a_logo() -> None:
         assert "emblem" not in (PAGE / name).read_text(encoding="utf-8"), name
 
 
-def test_the_look_back_can_only_read() -> None:
-    """Past cases hold no form, input, or grade button, in markup or in its script."""
+def test_earlier_cases_can_only_read() -> None:
+    """A folded case is drawn from the sheet body with no controls, so it holds no grade button."""
     html = (PAGE / "index.html").read_text(encoding="utf-8")
-    start = html.index('id="past"')
-    markup = html[start : html.index("</section>", start)]
-    script = html[html.index("function pastCase") : html.index("function show(phase)")]
-    forbidden = (
-        "<form",
-        "<input",
-        "<textarea",
-        "<select",
-        "contenteditable",
-        "data-verdict",
-        "api/",
-        "fetch(",
-        "postjson(",
-        "sendgrade(",
-        "postgrades(",
-        "gradecontrols(",
-    )
-    for part in (markup, script):
-        for writable in forbidden:
-            assert writable not in part.lower(), writable
-    assert markup.count("<button") == 1 and 'id="past-back"' in markup
-    # An answer card takes grade controls as a fifth argument. The look-back passes none.
-    assert script.count("answerCard(") == 1
-    assert "V.answerCard(room, r.prompt_id, s, now)" in script
-    # The past view is chosen before any grading render, so no grade button is drawn.
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
     render = html[html.index("function render()") :]
-    assert render.index('view === "past"') < render.index("renderGrading(now)")
-
-
-def test_the_results_show_the_four_answers_read_only() -> None:
-    """The room talks about the answers in results, so the phone shows them under the bars."""
-    html = (PAGE / "index.html").read_text(encoding="utf-8")
-    start = html.index("function renderSplit")
-    body = html[start : html.index("function render()", start)]
-    assert 'id="split-answers"' in html
-    assert "V.answerCard(room, shown, s, Date.now())" in body  # no grade controls argument
+    start = render.index('$("old-cases")')
+    old = render[start : render.index("\n}\n", start)]
+    assert "V.sheetBody(room, r, { now })" in old  # no controls argument
+    assert "gradeControls" not in old and "data-verdict" not in old
+    # Only the case being graded is handed the controls, and only while grading is open.
+    assert "controls: live ? gradeControls : null" in render
+    assert 'const live = phase === "grading" && top?.n === room.round.n;' in render
+    body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "data-verdict" not in body
+
+
+def test_the_tally_shows_only_once_the_results_are_open() -> None:
+    """The room sees a count, never a direction, so a card's tally waits for the split."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
+    assert "const cells = r.split ? splitFor(room, r.n) : null;" in body
+    assert 'cell ? tallyHtml(cell) : ""' in body
 
 
 def test_no_run_status_reads_like_a_grade() -> None:
@@ -171,3 +153,14 @@ def test_a_pasted_prompt_shows_its_context_apart_from_its_question() -> None:
     assert 'id="context"' in screen and "CONTEXT_LINES" in screen
     assert ".case__text, #title { white-space: pre-wrap; }" in css
     assert ".screen #main h1 { flex: none; }" in css
+
+
+def test_the_attendee_page_is_one_casebook_column() -> None:
+    """Newest case on top, earlier ones folded below, and no tab to a separate look-back."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert 'id="live-case"' in html and 'id="old-cases"' in html
+    assert 'id="tabs"' not in html and "past-list" not in html
+    # Holding is the title and the join address, so the casebook is not drawn there.
+    assert "const [top, ...older] = waiting ? [] : casesNow();" in html
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    assert ".sheet .answer__text { max-height: 12rem; overflow: auto;" in css
