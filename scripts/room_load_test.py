@@ -98,6 +98,7 @@ class Feed:
         self.phase = ""
         self.round_n = 0
         self.graded: dict[int, int] = {}
+        self.fallbacks: set[str] = set()
         self.phase_events: list[tuple[str, int, float]] = []
         self.gaps: list[tuple[int, int]] = []
         self.reconnects = 0
@@ -169,6 +170,8 @@ class Feed:
                 self.round_n = data["n"]
             elif kind == "grades":
                 self.graded[data["n"]] = data["graded"]
+            elif kind == "fallback":
+                self.fallbacks.add(data["prompt_id"])
             self._wake.notify_all()
 
     async def until(self, ready: Any, timeout: float) -> bool:
@@ -463,10 +466,21 @@ class Run:
         if self.args.pause_at == "answering" and n == self.args.pause_round:
             await self.pause("answering", n)
         snap, waited = await self.settle(ids, len(subjects))
+        if any(a["state"] == "failed" for a in snap["answers"]):
+            await asyncio.sleep(1.0)  # a fallback re-asks the round, so look again
+            snap, waited = await self.settle(ids, len(subjects))
         marks["settled"] = time.monotonic()
         record["answers"] = self.measure(snap, ids)
         record["answers"]["settled_s"] = round(waited, 1)
         record["answers"]["waited_out"] = record["answers"]["stuck"] > 0
+        watcher = self.feeds[0]
+        await watcher.until(lambda: watcher.rev >= snap["rev"], self.args.swap_timeout)
+        record["fallbacks"] = len(set(ids) & watcher.fallbacks)
+        if record["fallbacks"]:
+            self.findings.append(
+                f"round {n}: {record['fallbacks']} prompts moved to the fallback model, "
+                "so their primary answers failed"
+            )
         if record["answers"]["stuck"]:
             self.fail(f"round {n}: {record['answers']['stuck']} answers never finished")
         if not ids:

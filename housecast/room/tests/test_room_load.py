@@ -176,3 +176,19 @@ def test_thirty_clients_queue_behind_the_engine_cap(tmp_path: Path) -> None:
     assert answers["peak_running"] <= 40
     waits = [s["queue_s"]["p95"] for s in answers["per_subject"].values()]
     assert max(waits) > 0.25, "120 answers through 40 slots should queue"
+
+
+def test_a_fallback_is_counted_and_cannot_hide_a_failed_primary(tmp_path: Path) -> None:
+    """The fallback turns failed answers into done ones, so the run must say it fired."""
+    log, port = tmp_path / "room.jsonl", free_port()
+    served = Served(log, port, stub(fail_model="route"), fallback="fallback-route").start()
+    try:
+        code = _load().main(argv(served, tmp_path, "--rounds", "1", "--clients", "4"))
+    finally:
+        served.stop()
+    result = report(tmp_path)
+    assert code == 0, result["failures"]
+    assert result["rounds"][0]["fallbacks"] == 4
+    assert any("fallback model" in finding for finding in result["findings"])
+    for subject in result["rounds"][0]["answers"]["per_subject"].values():
+        assert subject["done"] == subject["answers"] == 4

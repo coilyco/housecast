@@ -12,6 +12,7 @@ import json
 import socket
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -26,8 +27,10 @@ CFG = Settings(proxy="http://proxy", model="route", jev_model="jev")
 TOKEN = "room-test-token"
 
 
-def stub(delay: float = 0.0, fail: str | None = None) -> httpx.MockTransport:
-    """A model route that answers every subject, optionally slowly, or 429s one system prompt."""
+def stub(
+    delay: float = 0.0, fail: str | None = None, fail_model: str | None = None
+) -> httpx.MockTransport:
+    """A model route that answers every subject, optionally slowly, or 429s a prompt or model."""
 
     async def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
@@ -35,7 +38,7 @@ def stub(delay: float = 0.0, fail: str | None = None) -> httpx.MockTransport:
             return httpx.Response(200, json={"answers": {"divergence": {"score": 2.0}}})
         system = body["messages"][0]["content"]
         await asyncio.sleep(delay)
-        if system == fail:
+        if system == fail or body["model"] == fail_model:
             return httpx.Response(429)
         return httpx.Response(200, json={"choices": [{"message": {"content": f"re: {system}"}}]})
 
@@ -49,12 +52,14 @@ def free_port() -> int:
 
 
 class Served:
-    def __init__(self, log: Path, port: int, transport: httpx.MockTransport) -> None:
+    def __init__(
+        self, log: Path, port: int, transport: httpx.MockTransport, fallback: str | None = None
+    ) -> None:
         room = Room(subjects=SUBJECTS, log_path=log)
         room.load()
         app = create_app(
             room,
-            CFG,
+            replace(CFG, fallback_model=fallback),
             TOKEN,
             rate_seconds=0.2,
             client=httpx.AsyncClient(transport=transport),
