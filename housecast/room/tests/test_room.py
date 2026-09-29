@@ -168,6 +168,25 @@ def test_subjects_need_a_label_and_resolve_system_files(tmp_path: Path) -> None:
         load_subjects(bad)
 
 
+def test_subjects_pass_their_display_fields_through(tmp_path: Path) -> None:
+    path = tmp_path / "subjects.json"
+    entry = {
+        "id": "a",
+        "label": "Violet",
+        "system": "s",
+        "color": "#123456",
+        "logo": "creatures/violet.png",
+        "role": "Tester",
+        "line": "Checks it twice.",
+        "unknown": "dropped",
+    }
+    path.write_text(json.dumps([entry]))
+    subject = load_subjects(path)[0]
+    assert subject["logo"] == "creatures/violet.png" and subject["role"] == "Tester"
+    assert subject["line"] == "Checks it twice." and subject["color"] == "#123456"
+    assert "unknown" not in subject
+
+
 def test_a_round_withholds_direction_until_the_split() -> None:
     room = Room(subjects=SUBJECTS)
     asyncio.run(run(room, proxy({s["system"]: s["label"] for s in SUBJECTS})))

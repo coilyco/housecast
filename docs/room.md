@@ -9,8 +9,10 @@ grade PASS or FAIL. Record and full data contract:
 ## What a consumer brings
 
 `subjects.json` alone. Each subject is `{id, label, system}` or
-`{id, label, system_file}`, with optional `color` and `emblem` for the page.
-`label` is what the room shows, and nothing says where a prompt came from.
+`{id, label, system_file}`, with optional `color`, `emblem`, `logo`, `role`,
+and `line` for the page. `label` is the seat's canonical creature name, never
+a session name. `logo` is a path under the page directory, and the pages hold
+no subject's name, colour, or logo of their own.
 
 ## Environment
 

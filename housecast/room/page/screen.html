@@ -87,6 +87,7 @@ function render() {
     $("opening-join").textContent = host;
     return;
   }
+  $("main").dataset.phase = room.phase;
   const eyebrow = $("eyebrow");
   eyebrow.className = "eyebrow";
   if (room.phase === "submissions") {

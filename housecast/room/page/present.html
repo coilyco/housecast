@@ -13,6 +13,8 @@
   .bar .next:disabled { opacity: 0.55; cursor: not-allowed; }
   .bar select { min-height: 2.4rem; border-radius: 8px; border: 1px solid var(--line); background: var(--deep); padding: 0 0.5rem; }
   .bar .status { margin-left: auto; font-size: 0.9rem; }
+  .banner { order: -2; }
+  #round-panel { order: -1; }
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 1.25rem; align-items: start; }
   @media (max-width: 900px) { .cols { grid-template-columns: minmax(0, 1fr); } }
   .incoming { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
@@ -21,7 +23,7 @@
   .incoming .score { font-family: var(--mono); font-weight: 700; }
   .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; font-size: 0.85rem; color: var(--dim); }
   .chip { display: inline-flex; gap: 0.3em; align-items: center; }
-  .chip b { color: var(--c); font-weight: 700; }
+  .chip .logo { width: 1.5em; height: 1.5em; }
   .sort { display: flex; gap: 0.4rem; }
   .sort button { min-height: 2.2rem; padding: 0 0.8rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--dim); }
   .sort button[aria-pressed="true"] { color: var(--text); border-color: var(--presenter); }
@@ -49,7 +51,7 @@
     <label class="dim">Jump to
       <select id="jump" aria-label="Jump the room to a phase"></select>
     </label>
-    <button class="next" id="closer-toggle" type="button" hidden></button>
+    <button class="next" id="finish" type="button" hidden>Finish: show the failing grades</button>
     <p class="status" id="status" role="status"></p>
   </header>
   <main class="wrap" style="max-width:90rem">
@@ -85,7 +87,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { PHASES, promptById, answerFor, lookOf, seconds, escapeHtml, postJson } = window.Room;
+const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -146,7 +148,7 @@ function chips(prompt) {
     .map((s) => {
       const answer = answerFor(room, prompt.id, s.id);
       const word = { queued: "waiting", running: "thinking", done: "done", empty: "no answer", failed: "failed" }[answer.state] ?? answer.state;
-      return `<span class="chip" style="--c:${lookOf(room, s).color}"><b>${escapeHtml(s.label)}</b> ${word}</span>`;
+      return `<span class="chip">${V.who(room, s)} ${word}</span>`;
     })
     .join("");
 }
@@ -165,27 +167,35 @@ function renderIncoming() {
     : `<li class="dim">No prompts yet. They arrive once submissions open.</li>`);
 }
 
+/** What picking the selected prompt would do, so the bar and the panel say the same thing. */
+function pickInfo(now) {
+  const prompt = selected ? promptById(room, selected) : null;
+  if (!prompt || room.phase !== "submissions") return null;
+  // Grading on a missing answer would leave the room nothing to grade, so the pick waits for all four.
+  // Empty and failed are final, so only queued or running holds the pick. A subject
+  // stuck past PICK_ANYWAY_S can't stall the round: the pick opens, and says who is missing.
+  const stuck = room.subjects.filter((s) => ["queued", "running"].includes(answerFor(room, prompt.id, s.id).state));
+  const oldest = Math.max(0, ...stuck.map((s) => { const a = answerFor(room, prompt.id, s.id); return a.started_at ? seconds(a.started_at, now) : 0; }));
+  const anyway = stuck.length > 0 && oldest >= PICK_ANYWAY_S;
+  const label = !stuck.length
+    ? `Pick this for round ${room.round.n + 1}, and open grading`
+    : anyway
+      ? `Pick anyway, without ${stuck.map((s) => s.label).join(" and ")}`
+      : `Waiting on ${stuck.length} ${stuck.length === 1 ? "answer" : "answers"} before this can be picked`;
+  return { label, disabled: stuck.length > 0 && !anyway };
+}
+
 function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
   $("detail-title").textContent = prompt ? prompt.text : "Pick a prompt to read its four answers";
   const d = prompt && room.divergence[prompt.id];
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now)).join("") : "");
-  const canPick = prompt && room.phase === "submissions";
-  // Grading on a missing answer would leave the room nothing to grade, so the pick waits for all four.
-  // Empty and failed are final, so only queued or running holds the pick. A subject
-  // stuck past PICK_ANYWAY_S can't stall the round: the pick opens, and says who is missing.
-  const stuck = prompt ? room.subjects.filter((s) => ["queued", "running"].includes(answerFor(room, prompt.id, s.id).state)) : [];
-  const oldest = prompt ? Math.max(0, ...stuck.map((s) => { const a = answerFor(room, prompt.id, s.id); return a.started_at ? seconds(a.started_at, now) : 0; })) : 0;
-  const anyway = stuck.length > 0 && oldest >= PICK_ANYWAY_S;
-  $("pick").hidden = !canPick;
-  $("pick").disabled = stuck.length > 0 && !anyway;
-  if (canPick) {
-    $("pick").textContent = !stuck.length
-      ? `Pick this for round ${room.round.n + 1}, and open grading`
-      : anyway
-        ? `Pick anyway, without ${stuck.map((s) => s.label).join(" and ")}`
-        : `Waiting on ${stuck.length} ${stuck.length === 1 ? "answer" : "answers"} before this can be picked`;
+  const pick = pickInfo(now);
+  $("pick").hidden = !pick;
+  if (pick) {
+    $("pick").disabled = pick.disabled;
+    $("pick").textContent = pick.label;
   }
 }
 
@@ -227,12 +237,14 @@ function render() {
     closerShown = false;
     screenChannel?.postMessage({ closer: false });
   }
-  $("closer-toggle").hidden = room.phase !== "closing" || !screenChannel;
-  $("closer-toggle").textContent = closerShown ? "Back to the failing grades" : "Show the closer on the shared screen";
   $("phase-label").textContent = `phase // ${room.phase}${room.round.n ? ` // round ${room.round.n}` : ""}`;
+  const pick = pickInfo(now);
   const next = NEXT[room.phase];
-  $("next").textContent = next.label;
-  $("next").disabled = !next.to;
+  // In closing the primary raises the closer, since going back to holding resets the room.
+  const raisesCloser = room.phase === "closing" && Boolean(screenChannel);
+  $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the failing grades" : "Show the closer on the shared screen") : next.label;
+  $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
+  $("finish").hidden = room.phase !== "split";
   V.setHtml($("jump"), PHASES.map((p) => `<option value="${p}"${p === room.phase ? " selected" : ""}>${p}</option>`).join(""));
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
@@ -282,16 +294,18 @@ document.querySelector(".sort").addEventListener("click", (event) => {
   render();
 });
 $("next").addEventListener("click", () => {
+  if (pickInfo(Date.now())) return void control("pick", { prompt_id: selected });
+  if (room.phase === "closing" && screenChannel) {
+    closerShown = !closerShown;
+    screenChannel.postMessage({ closer: closerShown });
+    return render();
+  }
   const next = NEXT[room.phase];
   if (next.to) void control("phase", { phase: next.to });
 });
+$("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
 $("jump").addEventListener("change", (event) => {
   if (event.target.value !== room.phase) void control("phase", { phase: event.target.value });
-});
-$("closer-toggle").addEventListener("click", () => {
-  closerShown = !closerShown;
-  screenChannel?.postMessage({ closer: closerShown });
-  render();
 });
 $("pick").addEventListener("click", () => {
   if (selected) void control("pick", { prompt_id: selected });

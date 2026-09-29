@@ -6,14 +6,18 @@ const { answerFor, lookOf, seconds, escapeHtml, leaderboard, splitFor, TYPICAL_S
 
 function who(room, subject) {
   const look = lookOf(room, subject);
-  return `<span class="who" style="--c:${look.color}"><span class="emblem" aria-hidden="true">${look.emblem}</span>${escapeHtml(subject.label)}</span>`;
+  // The logo is decorative: the name beside it is what is announced.
+  const mark = look.logo
+    ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
+    : `<span class="emblem" aria-hidden="true">${look.emblem}</span>`;
+  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
 }
 
 function subjectById(room, id) {
   return room.subjects.find((s) => s.id === id) ?? { id, label: id };
 }
 
-/** The four, with each one's role and line from the deck when `full`. */
+/** The four, with each one's role and line from subjects.json when `full`. */
 function cast(room, { full = false } = {}) {
   return room.subjects
     .map((s) => {
@@ -49,7 +53,7 @@ function stateOf(answer, now) {
 }
 
 /** One subject's answer card. `extra` is appended inside it, for grading controls. */
-function answerCard(room, promptId, subject, now, extra = "") {
+function answerCard(room, promptId, subject, now, extra = "", { about = false } = {}) {
   const answer = answerFor(room, promptId, subject.id);
   const state = stateOf(answer, now);
   let body = "";
@@ -57,9 +61,11 @@ function answerCard(room, promptId, subject, now, extra = "") {
   else if (answer.state === "empty" || answer.state === "failed") body = `<p class="answer__reason">${escapeHtml(answer.reason ?? "No reason given.")}</p>`;
   else if (answer.state === "running" || answer.state === "queued")
     body = `<div class="track" aria-hidden="true"><span style="width:${Math.round((state.progress ?? 0) * 100)}%"></span></div>${answer.state === "running" ? `<p class="answer__reason">Usually about ${TYPICAL_S}s.</p>` : ""}`;
-  return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${lookOf(room, subject).color}" aria-label="${escapeHtml(subject.label)}">
+  const look = lookOf(room, subject);
+  const intro = about && look.role ? `<p class="answer__about"><b>${escapeHtml(look.role)}</b><span>${escapeHtml(look.line)}</span></p>` : "";
+  return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${look.color}" aria-label="${escapeHtml(subject.label)}">
     <header class="answer__head">${who(room, subject)}<span class="answer__state"${state.tone ? ` data-tone="${state.tone}"` : ""}>${escapeHtml(state.text)}</span></header>
-    ${body}${extra}
+    ${intro}${body}${extra}
   </article>`;
 }
 
@@ -88,9 +94,10 @@ function split(room, n, { tall = 16 } = {}) {
   return cells
     .map(({ subject, pass, fail, share }) => {
       const pct = share === null ? null : Math.round(share * 100);
+      // A percentage of the track, so /screen can size the track to the window.
       return `<div class="split__col" style="--c:${lookOf(room, subject).color}">
         <p class="split__share">${pct === null ? "–" : `${pct}%`}</p>
-        <div class="split__bar" style="height:${Math.max(0.3, ((pct ?? 0) / 100) * tall)}rem" aria-hidden="true"></div>
+        <div class="split__track" style="--tall:${tall}rem" aria-hidden="true"><div class="split__bar" style="height:${pct ?? 0}%"></div></div>
         ${who(room, subject)}
         <p class="split__counts">${pass} pass, ${fail} fail</p>
       </div>`;
