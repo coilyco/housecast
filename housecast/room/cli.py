@@ -14,6 +14,17 @@ from housecast.room.store import Room
 from housecast.room.subjects import SubjectsError, load_subjects
 
 
+def parse_route_limits(text: str) -> dict[str, int]:
+    """`chat/glm-5-3=4,other=8` as {model: most answers in flight}."""
+    limits: dict[str, int] = {}
+    for part in filter(None, (p.strip() for p in text.split(","))):
+        model, _, count = part.rpartition("=")
+        if not model or not count.isdigit() or int(count) < 1:
+            raise click.BadParameter(f"{part!r} is not model=count", param_hint="--route-limits")
+        limits[model] = int(count)
+    return limits
+
+
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def room() -> None:
     """The live room: intake, fan-out, divergence, restart log."""
@@ -49,6 +60,20 @@ def room() -> None:
     help="a non-Anthropic route the whole round moves to when an answer fails; unset is none",
 )
 @click.option("--jev-model", envvar="ROOM_JEV_MODEL", default="jev-1.13.0", show_default=True)
+@click.option(
+    "--route-limits",
+    envvar="ROOM_ROUTE_LIMITS",
+    default="",
+    help="most answers in flight per route, as model=count,model=count; others are uncapped",
+)
+@click.option(
+    "--retries",
+    envvar="ROOM_RETRIES",
+    default=1,
+    show_default=True,
+    type=click.IntRange(min=0),
+    help="extra asks after a transient proxy error such as a 429 or 5xx, backing off 2s, 4s, ...",
+)
 @click.option(
     "--user",
     "user_tag",
@@ -95,6 +120,8 @@ def serve_cmd(
     model: str,
     fallback_model: str | None,
     jev_model: str,
+    route_limits: str,
+    retries: int,
     user_tag: str,
     rate_seconds: float,
     address_burst: int,
@@ -120,6 +147,8 @@ def serve_cmd(
             key=os.environ.get("ROOM_PROXY_KEY"),
             user=user_tag,
             fallback_model=fallback_model or None,
+            route_limits=parse_route_limits(route_limits),
+            retries=retries,
         )
     except ModelRefusedError as refused:
         raise click.BadParameter(str(refused), param_hint="--fallback-model") from refused

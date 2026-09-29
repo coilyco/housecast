@@ -8,6 +8,7 @@ that came back non-empty.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import secrets
 from collections.abc import Callable
@@ -45,6 +46,7 @@ class Engine:
         self.cfg = cfg
         self.client = client
         self._slots = asyncio.Semaphore(concurrency)
+        self._routes = {m: asyncio.Semaphore(n) for m, n in cfg.route_limits.items()}
         self._tasks: set[asyncio.Task[None]] = set()
 
     def _spawn(self, coro: Any) -> None:
@@ -102,7 +104,9 @@ class Engine:
 
     async def _answer(self, prompt: dict[str, Any], subject: dict[str, str]) -> None:
         base = {"prompt_id": prompt["id"], "subject_id": subject["id"]}
-        async with self._slots:
+        route = self._model_for(prompt, subject) or self.cfg.model
+        # The route's cap comes first, so answers waiting on it hold no global slot.
+        async with self._routes.get(route) or contextlib.nullcontext(), self._slots:
             started = now()
             self.room.emit("answer", {**base, "state": "running", "started_at": started})
             try:
@@ -151,11 +155,13 @@ class Engine:
         model: str | None = None,
         on_empty: Callable[[int, str], None] | None = None,
     ) -> str:
-        """One answer under the deadline, retried once on a transient proxy error or on
-        an answer that strips to nothing, a subject that tried to run a command."""
+        """One answer under the deadline. A transient proxy error is retried up to
+        cfg.retries times, and an answer that strips to nothing, a subject that tried to
+        run a command, is asked once more."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.cfg.answer_deadline
-        for attempt in (1, 2):
+        errors = empties = 0
+        while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
                 raise TimeoutError
@@ -163,16 +169,18 @@ class Engine:
                 raw = await asyncio.wait_for(
                     models.complete(self.client, self.cfg, system, text, model), timeout=remaining
                 )
-                answer = models.strip_markup(raw)
-                if not answer and on_empty:
-                    on_empty(attempt, raw)
-                if answer or attempt == 2:
-                    return answer
             except (httpx.TransportError, httpx.HTTPStatusError) as err:
-                if attempt == 2 or not _transient(err):
+                errors += 1
+                if errors > self.cfg.retries or not _transient(err):
                     raise
-                await asyncio.sleep(min(RETRY_PAUSE, max(0.0, deadline - loop.time())))
-        raise TimeoutError  # unreachable: the second attempt returns or raises
+                await asyncio.sleep(min(RETRY_PAUSE * errors, max(0.0, deadline - loop.time())))
+                continue
+            answer = models.strip_markup(raw)
+            if not answer and on_empty:
+                on_empty(errors + empties + 1, raw)
+            if answer or empties:
+                return answer
+            empties += 1
 
     async def _maybe_score(self, prompt: dict[str, Any]) -> None:
         answers = self.room.answers_for(prompt["id"])

@@ -10,7 +10,7 @@ from __future__ import annotations
 import itertools
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -75,10 +75,16 @@ class Settings:
     jev_timeout: float = 60.0
     # None means no fallback: a failed answer stays failed, as it always has.
     fallback_model: str | None = None
+    # Most answers in flight on one route, by model name. A route not listed has no cap.
+    route_limits: dict[str, int] = field(default_factory=dict)
+    # Extra asks after a transient proxy error, spaced 2s, 4s, ... inside the deadline.
+    retries: int = 1
 
     def __post_init__(self) -> None:
         if self.fallback_model:
             check_model_name(self.fallback_model, "the fallback model")
+        if self.retries < 0 or any(n < 1 for n in self.route_limits.values()):
+            raise ValueError("retries must be 0 or more and every route limit 1 or more")
 
     def headers(self) -> dict[str, str]:
         headers = {"x-agent-session-id": self.user}

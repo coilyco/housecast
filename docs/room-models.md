@@ -18,6 +18,12 @@ after the presenter has picked it, since the answers would change under the grad
 There is no default, so with none set a failed answer stays failed. Attendees and the presenter stream see
 that a switch happened and never the model. The event log and the server log carry the model name.
 
+## Route limits and retries
+
+A provider may cap how many calls it takes at once. `ROOM_ROUTE_LIMITS` (`--route-limits`) is `model=count,...`,
+the most answers in flight on that route, and a route not listed has no cap. `ROOM_RETRIES` (`--retries`,
+default 1) is how many extra asks a 429 or 5xx gets, waiting 2s, 4s, ... inside the answer deadline.
+
 ## Restart
 
 Every event is appended before it is applied, and a start replays the log, dropping a torn last
