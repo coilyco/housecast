@@ -13,11 +13,17 @@ grade PASS or FAIL. Record and full data contract:
 `label` is the seat's canonical creature name, never a session name, and `logo` is a path under the page directory. The pages hold no subject's name, colour, or logo of their own.
 A subject may also name its own `model`, and the room may name a fallback: [`room-models.md`](room-models.md).
 
-## Environment
+## Your own agents
 
-`ROOM_PROXY` is an OpenAI-compatible base URL (`/v1/chat/completions` answers, `/v1/systemone` scores). `ROOM_MODEL` and `ROOM_JEV_MODEL` pick the routes, and `ROOM_CONTROL_TOKEN` gates the presenter, or one is minted and printed.
+Any OpenAI-compatible endpoint runs a room, set by three variables. Copy the folder in [`examples/`](../examples/README.md).
 
-Rate limits key on the viewer's address. `ROOM_TRUSTED_HOPS` counts the `X-Forwarded-For` entries trusted proxies append, and the viewer is the leftmost of them: 1 behind one ingress (the default), 3 behind CloudFront plus a Google external Application Load Balancer, which appends `<client-ip>,<load-balancer-ip>`. Too low, and every phone shares one limit. `ROOM_CLIENT_HEADER=CloudFront-Viewer-Address` reads it from that header when an origin request policy forwards it (`teable:coilyco/deploy#8452`).
+* `ROOM_PROXY` - the base URL with no `/v1`. The room posts to `<base>/v1/chat/completions`, and a local Ollama is `http://localhost:11434`.
+* `ROOM_PROXY_KEY` - sent as `Authorization: Bearer <key>`. Unset sends no header, which a local server accepts.
+* `ROOM_MODEL` - the model name that endpoint serves. A subject's own `model` overrides it.
+
+The defaults are the author's: `http://ser8:8080` is a tailnet host, `evaluation/deepseek-v4-pro` a route on it, and `jev-1.13.0` (`ROOM_JEV_MODEL`) a scoring model at `<base>/v1/systemone`. Without a Jev endpoint every score falls back to word overlap, which the presenter page marks `*`. Answers are unaffected.
+
+`ROOM_CONTROL_TOKEN` gates the presenter, or one is minted and printed. Behind a proxy or CDN: [`room-site.md`](room-site.md). The restart log: [`room-models.md`](room-models.md#restart).
 
 ## Surfaces
 
@@ -31,9 +37,4 @@ once its prompt is picked, and grades travel as a count until the split.
 An answer is the subject's system prompt plus the prompt and a short-answer
 frame, at a 4000-token cap, with tool-call markup stripped. Divergence asks Jev
 for the stance distance over the answers, as a level from 0 to 4 reported over
-4, and falls back to lexical distance, marked `lexical`, when Jev fails.
-
-## The restart log
-
-Every event is appended before it is applied, and a start replays the log,
-dropping a torn last line. Answers a restart cut off are asked again.
+4, and falls back to lexical distance, marked `lexical` (`*` on the presenter page), when Jev fails.

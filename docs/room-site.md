@@ -12,8 +12,7 @@ control-token header passed through. The pages already call the API relative
 the event stream stays same-origin. The server's 15s SSE heartbeat sits under
 CloudFront's 30s origin read timeout.
 
-This depends on the server reading the viewer's address correctly behind the
-proxy, because the room rate-limits per address. That fix is on the server.
+The room rate-limits per viewer address, so the server must read it correctly behind the proxy. `ROOM_TRUSTED_HOPS` counts the `X-Forwarded-For` entries trusted proxies append, and the viewer is the leftmost of them: 1 behind one ingress (the default), 3 behind CloudFront plus a Google external Application Load Balancer, which appends `<client-ip>,<load-balancer-ip>`. Too low, and every phone shares one limit. `ROOM_CLIENT_HEADER=CloudFront-Viewer-Address` reads it from that header when an origin request policy forwards it.
 
 ## The export
 

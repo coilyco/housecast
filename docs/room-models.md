@@ -20,7 +20,8 @@ that a switch happened and never the model. The event log and the server log car
 
 ## Restart
 
-The switch is one log event, and replaying it re-queues every answer of that prompt. A restart mid-round
+Every event is appended before it is applied, and a start replays the log, dropping a torn last
+line. Answers a restart cut off are asked again. The switch is one log event, and replaying it re-queues every answer of that prompt. A restart mid-round
 neither loses the switch nor repeats it. Answers the restart cut off resume on the model the event
 recorded, whatever the restart's own setting says.
 
