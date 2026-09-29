@@ -66,8 +66,8 @@
         <input id="case-file" type="file" accept="application/json,.json">
       </div>
       <div class="field">
-        <label for="case-text" class="dim">Or add one by hand. The prompt, up to 280 characters</label>
-        <textarea id="case-text" maxlength="280"></textarea>
+        <label for="case-text" class="dim">Or add one by hand</label>
+        <textarea id="case-text"></textarea>
         <label for="case-commit" class="dim">The commitment it tests, up to 140 characters</label>
         <input id="case-commit" type="text" maxlength="140" autocomplete="off">
         <button class="pick" id="case-add" type="button">Add this case</button>
@@ -107,7 +107,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson, SHOW_PROPOSALS } = window.Room;
+const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson, SHOW_PROPOSALS, CASE_MAX } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -173,6 +173,12 @@ function chips(prompt) {
     .join("");
 }
 
+/** One line for a list row: the question, without its pasted context. */
+function oneLine(text) {
+  const line = (V.splitPrompt(text).question || String(text ?? "")).replace(/\s+/g, " ").trim();
+  return line.length > 140 ? `${line.slice(0, 139)}…` : line;
+}
+
 function renderIncoming() {
   const rows = sortedPrompts();
   V.setHtml($("incoming"), rows.length
@@ -181,7 +187,7 @@ function renderIncoming() {
         const score = d?.state === "done" ? `${d.score.toFixed(2)}${d.method === "lexical" ? "*" : ""}` : d?.state === "failed" ? "unscored" : "…";
         const used = room.rounds.some((r) => r.prompt_id === p.id) || room.round.prompt_id === p.id;
         return `<li><button type="button" data-prompt="${escapeHtml(p.id)}"${p.id === selected ? ' aria-current="true"' : ""}>
-          <span>${escapeHtml(p.text)}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
+          <span>${escapeHtml(oneLine(p.text))}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
           <span class="chips"><span class="src" data-src="${escapeHtml(p.source ?? "attendee")}">${p.source === "prepared" ? "prepared" : "from the room"}</span>${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
           <span class="chips">${chips(p)}</span></button></li>`;
       }).join("")
@@ -214,10 +220,10 @@ function pickInfo(now) {
 
 function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
-  $("detail-title").textContent = prompt ? prompt.text : "Pick a case to read its four answers";
+  $("detail-title").textContent = prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers";
   const d = prompt && room.divergence[prompt.id];
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
-  V.setHtml($("detail-case"), prompt ? V.caseCard({ commitment: prompt.commitment, source: prompt.source }, { withText: false, presenter: true }) : "");
+  V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   const pick = pickInfo(now);
   $("pick").hidden = !pick;
@@ -363,6 +369,8 @@ $("pick").addEventListener("click", () => {
   if (selected) void control("pick", { prompt_id: selected });
 });
 // ------------------------------------------------------ prepared cases
+$("case-text").maxLength = CASE_MAX;
+document.querySelector('label[for="case-text"]').textContent = `Or add one by hand. Context first, then the question, up to ${CASE_MAX} characters`;
 function caseNote(text, tone) {
   const el = $("case-note");
   el.hidden = !text;
