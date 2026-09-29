@@ -8,6 +8,7 @@ import json
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -148,6 +149,30 @@ def test_an_answer_of_only_markup_is_counted_as_empty(tmp_path: Path) -> None:
     assert code == 0 and per["Amber"]["empty"] == 4 and per["Amber"]["done"] == 0
     assert all(row["empty"] == 0 for name, row in per.items() if name != "Amber")
     assert "round 1: Amber gave 4 empty answers" in result["findings"]
+
+
+def test_the_split_allows_only_the_outside_grades_it_was_told_about() -> None:
+    subjects = ["s1", "s2"]
+
+    class Snap:
+        async def snapshot(self) -> dict[str, Any]:
+            return {"rounds": [{"n": 1, "split": split}]}
+
+    def check(outside: int) -> Any:
+        args = SimpleNamespace(out=Path("."), outside_graders=outside)
+        run = _load().Run(args, Snap(), [SimpleNamespace(index=0)])
+        return asyncio.run(run.check_split(1, subjects)), run.failures
+
+    # One harness client, index 0: s1 passes 0 -> fail, s2 passes 1 -> pass.
+    split = {"s1": {"pass": 0, "fail": 1}, "s2": {"pass": 1, "fail": 0}}
+    assert check(0) == ({"totals_match": True, "outside_grades": 0, "split": split}, [])
+    split = {"s1": {"pass": 1, "fail": 1}, "s2": {"pass": 1, "fail": 1}}
+    result, failures = check(0)
+    assert not result["totals_match"] and failures
+    result, failures = check(1)
+    assert result["totals_match"] and result["outside_grades"] == 2 and not failures
+    split = {"s1": {"pass": 0, "fail": 0}, "s2": {"pass": 1, "fail": 0}}
+    assert not check(1)[0]["totals_match"]  # a harness grade went missing
 
 
 def test_the_token_file_must_be_private(tmp_path: Path) -> None:
