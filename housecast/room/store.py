@@ -72,6 +72,15 @@ class Room:
             queue.put_nowait(self.project(event, view))
         return event
 
+    def note(self, kind: str, data: dict[str, Any]) -> None:
+        """A log line for the operator. It takes no rev and reaches no view or stream."""
+        if self.log_path is None:
+            return
+        event = {"rev": self.rev, "at": now(), "kind": kind, "data": data}
+        with self.log_path.open("a") as log:
+            log.write(json.dumps(event, separators=(",", ":")) + "\n")
+            log.flush()
+
     def _apply(self, event: dict[str, Any]) -> None:
         kind, data = event["kind"], event["data"]
         self.rev = max(self.rev, int(event["rev"]))

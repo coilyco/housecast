@@ -87,13 +87,14 @@ class Settings:
         return headers
 
 
-async def answer(
+async def complete(
     client: httpx.AsyncClient,
     cfg: Settings,
     system: str,
     prompt: str,
     model: str | None = None,
 ) -> str:
+    """The model's reply as it came back, before any markup is stripped."""
     user = f"{prompt}\n\n{cfg.frame}" if cfg.frame else prompt
     reply = await client.post(
         f"{cfg.proxy}/v1/chat/completions",
@@ -108,8 +109,7 @@ async def answer(
         timeout=cfg.answer_deadline,
     )
     reply.raise_for_status()
-    content = reply.json()["choices"][0]["message"].get("content") or ""
-    return strip_markup(str(content))
+    return str(reply.json()["choices"][0]["message"].get("content") or "")
 
 
 def jev_body(prompt: str, texts: list[str], key: str, model: str) -> dict[str, Any]:
