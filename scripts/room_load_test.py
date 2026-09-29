@@ -561,8 +561,12 @@ async def drive(args: argparse.Namespace, token: str) -> tuple[Run, dict[str, An
         for feed in feeds:
             await feed.start()
         ready = await asyncio.gather(*(f.until(lambda f=f: f.rev >= 0, 30.0) for f in feeds))
+        graded = (await presenter.snapshot())["rounds"]
         if not all(ready):
             run.fail("some clients never connected to the event stream")
+        elif graded:
+            # Rounds are numbered from 1 here, so a used log would refuse every grade.
+            run.fail(f"the room already has {len(graded)} rounds. Start it on an empty log")
         else:
             for n in range(1, args.rounds + 1):
                 await run.round(n)

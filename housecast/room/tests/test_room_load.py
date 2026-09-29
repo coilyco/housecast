@@ -123,6 +123,18 @@ def test_a_restart_mid_answers_replays_and_the_round_finishes(tmp_path: Path) ->
     assert all(n >= 1 for n in result["replay"]["client_resyncs"])
 
 
+def test_a_used_log_is_refused_before_any_grade_is_sent(tmp_path: Path) -> None:
+    served = Served(tmp_path / "room.jsonl", free_port(), stub()).start()
+    try:
+        first = _load().main(argv(served, tmp_path, "--rounds", "1", "--clients", "2"))
+        second = _load().main(argv(served, tmp_path, "--rounds", "1", "--clients", "2"))
+    finally:
+        served.stop()
+    result = report(tmp_path)
+    assert first == 0 and second == 1 and not result["rounds"]
+    assert result["failures"] == ["the room already has 1 rounds. Start it on an empty log"]
+
+
 def test_the_token_file_must_be_private(tmp_path: Path) -> None:
     module = _load()
     path = tmp_path / "token"
