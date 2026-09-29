@@ -23,13 +23,15 @@ LEVELS = ["same", "slight", "moderate", "large", "opposite"]
 _BAR, _SEP = chr(0xFF5C), chr(0x2581)  # DeepSeek's fullwidth tool-call fences
 _MARKUP = [
     re.compile(r"<tool_call>.*?</tool_call>", re.S),
-    re.compile(r"<function_calls>.*?</function_calls>", re.S),
+    re.compile(r"<(tool|function)_calls>.*?</\1_calls>", re.S),
     re.compile(
         f"<{_BAR}tool{_SEP}calls{_SEP}begin{_BAR}>.*?<{_BAR}tool{_SEP}calls{_SEP}end{_BAR}>", re.S
     ),
     re.compile(r"<(?:antml:)?invoke\b.*?</(?:antml:)?invoke>", re.S),
     # DeepSeek's DSML fence: doubled bars, a spaced `calls`, possibly never closed.
     re.compile(f"<{_BAR}+DSML{_BAR}+ *(\\w*calls)>.*?(?:</{_BAR}+DSML{_BAR}+ *\\1>|\\Z)", re.S),
+    # What the block patterns leave behind: a wrapper with its call already removed.
+    re.compile(r"</?(?:tool|function)_calls>"),
 ]
 
 
