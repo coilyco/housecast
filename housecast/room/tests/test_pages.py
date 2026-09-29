@@ -88,3 +88,10 @@ def test_the_results_show_the_four_answers_read_only() -> None:
     assert 'id="split-answers"' in html
     assert "V.answerCard(room, shown, s, Date.now())" in body  # no grade controls argument
     assert "data-verdict" not in body
+
+
+def test_no_run_status_reads_like_a_grade() -> None:
+    """Humans grade. An answer that did not come back is "no answer", never FAIL or "failed"."""
+    for name in ("views.js", "present.html", "screen.html", "index.html"):
+        text = (PAGE / name).read_text(encoding="utf-8")
+        assert "✕ failed" not in text and 'failed: "failed"' not in text, name

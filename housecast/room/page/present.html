@@ -167,7 +167,7 @@ function chips(prompt) {
   return room.subjects
     .map((s) => {
       const answer = answerFor(room, prompt.id, s.id);
-      const word = { queued: "waiting", running: "thinking", done: "done", empty: "no answer", failed: "failed" }[answer.state] ?? answer.state;
+      const word = { queued: "waiting", running: "thinking", done: "done", empty: "no answer", failed: "no answer" }[answer.state] ?? answer.state;
       return `<span class="chip">${V.who(room, s)} ${word}</span>`;
     })
     .join("");
