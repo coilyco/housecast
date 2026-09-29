@@ -12,7 +12,7 @@ own.
 [`docs/FEATURES.md`](docs/FEATURES.md) is the inventory. The name `housecast` is
 held on PyPI as a 0.0.1 placeholder. The release train that turns a
 `housecast-v*` tag into a real upload is wired, and until the first tag runs it,
-consumers install from Forgejo.
+consumers install from GitHub.
 
 ## The name
 
@@ -36,18 +36,22 @@ distribution. `house-cast` is held defensively and never shipped.
 ## Quick start
 
 ```
-git clone https://forgejo.coilysiren.me/coilyco-flight-deck/housecast.git
+git clone https://github.com/coilyco/housecast.git
 cd housecast
-just sync
-just check
+uv sync --extra room
+uv run --extra room housecast room serve \
+  --subjects examples/two-agents/subjects.json --log /tmp/room.jsonl
 ```
 
-`just` with no arguments lists every verb. `just check` is the offline gate:
-lint, format check, types, and tests in one recipe.
+That serves the live room on port 8767 with two example agents, against any
+OpenAI-compatible endpoint you name. [`docs/room.md`](docs/room.md) covers the
+endpoint, key, and model settings, and [`examples/`](examples/README.md) has the
+steps. `just` with no arguments lists the dev verbs, and `just check` is the
+offline gate: lint, format check, types, and tests in one recipe.
 
 ## Installing it elsewhere
 
-No release is on PyPI yet, only the reserved name. Depend on it from Forgejo
+No release is on PyPI yet, only the reserved name. Depend on it from GitHub
 with uv:
 
 ```toml
@@ -55,7 +59,7 @@ with uv:
 dependencies = ["housecast"]
 
 [tool.uv.sources]
-housecast = { git = "https://forgejo.coilysiren.me/coilyco-flight-deck/housecast.git", tag = "housecast-v0.1.0" }
+housecast = { git = "https://github.com/coilyco/housecast.git", tag = "housecast-v0.1.0" }
 ```
 
 That is the same shape the estate already uses for `aos-eval`. Add the `eval`

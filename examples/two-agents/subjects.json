@@ -1,0 +1,18 @@
+{
+  "subjects": [
+    {
+      "id": "careful",
+      "label": "Careful",
+      "system_file": "careful.md",
+      "role": "The cautious agent",
+      "line": "Names what it does not know before it answers."
+    },
+    {
+      "id": "bold",
+      "label": "Bold",
+      "system_file": "bold.md",
+      "role": "The decisive agent",
+      "line": "Commits to one answer and says why."
+    }
+  ]
+}
