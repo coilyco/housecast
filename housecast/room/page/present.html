@@ -86,7 +86,7 @@
         <ul class="incoming" id="incoming"></ul>
       </section>
       <section class="panel" aria-labelledby="detail-title" id="detail">
-        <h2 id="detail-title">Pick a prompt to read its four answers</h2>
+        <h2 id="detail-title">Pick a case to read its four answers</h2>
         <p class="dim" id="detail-meta"></p>
         <div id="detail-case"></div>
         <div class="answers" id="detail-answers"></div>
@@ -213,7 +213,7 @@ function pickInfo(now) {
 
 function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
-  $("detail-title").textContent = prompt ? prompt.text : "Pick a prompt to read its four answers";
+  $("detail-title").textContent = prompt ? prompt.text : "Pick a case to read its four answers";
   const d = prompt && room.divergence[prompt.id];
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
   V.setHtml($("detail-case"), prompt ? V.caseCard({ commitment: prompt.commitment, source: prompt.source }, { withText: false }) : "");

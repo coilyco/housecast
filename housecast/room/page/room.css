@@ -179,6 +179,7 @@ p { margin: 0; }
 .field textarea { min-height: 7rem; resize: vertical; padding: 0.9rem 1rem; border-radius: 12px; border: 1px dashed #3d4856; background: #1a1f26; font-size: 1.1rem; }
 .field__meta { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.85rem; color: var(--dim); }
 .field__meta [data-over="true"] { color: var(--text); font-weight: 700; }
+.field__meta span:last-child { white-space: nowrap; }
 .send { min-height: 3.2rem; border: 0; border-radius: 10px; background: var(--pass); color: var(--deep); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.06em; }
 .send:disabled { opacity: 0.6; cursor: not-allowed; }
 .note { padding: 0.7rem 0.9rem; border-radius: 10px; background: var(--card); }
