@@ -99,14 +99,13 @@ def test_the_screen_opens_on_kais_cover_line() -> None:
     assert f'<p class="dim">{OPENING_LINE}</p>' in html
 
 
-def test_the_screen_shows_the_machine_measurement_apart_from_the_bars() -> None:
-    """Jev's split sits under the results, labelled a measurement, with the backup marked."""
+def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:
+    """Jev's split shows once the results are open, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
-    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
     assert "by word overlap" in views and "Jev did not answer" in views
-    assert 'id="measure"' in screen and "V.measure(room, last.prompt_id)" in screen
-    assert "measure" not in views[views.index("function split(") : views.index("function measure(")]
+    body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
+    assert 'r.split ? measure(room, r.prompt_id) : ""' in body
 
 
 # Kai has never used the word, so the phone and the recording carry none of it. What
@@ -147,12 +146,11 @@ def test_a_pasted_case_can_be_picked_from_holding_and_from_results() -> None:
 def test_a_pasted_prompt_shows_its_context_apart_from_its_question() -> None:
     """Context sits in its own scrolling box, so a long paste never pushes the results off."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
-    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
     css = (PAGE / "room.css").read_text(encoding="utf-8")
     assert "function splitPrompt(" in views and 'class="case__code"' in views
-    assert 'id="context"' in screen and "CONTEXT_LINES" in screen
     assert ".case__text, #title { white-space: pre-wrap; }" in css
-    assert ".screen #main h1 { flex: none; }" in css
+    # On /screen the results keep a smaller box, so Jev's measurement stays in the window.
+    assert '.screen .sheets[data-phase="split"] .case__code { max-height: 20vh; }' in css
 
 
 def test_the_attendee_page_is_one_casebook_column() -> None:
@@ -164,3 +162,14 @@ def test_the_attendee_page_is_one_casebook_column() -> None:
     assert "const [top, ...older] = waiting ? [] : casesNow();" in html
     css = (PAGE / "room.css").read_text(encoding="utf-8")
     assert ".sheet .answer__text { max-height: 12rem; overflow: auto;" in css
+
+
+def test_the_screen_is_the_same_casebook_without_buttons() -> None:
+    """Newest case on top as a sheet, earlier cases folded, and nothing on it to press."""
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert 'id="sheets"' in screen and "function renderSheets(" in screen
+    body = screen[screen.index("function renderSheets(") : screen.index("function render()")]
+    assert "V.sheet(room, top, { now, live, note: graded })" in body  # no controls argument
+    assert "V.sheetBody(room, r, { now })" in body
+    for gone in ("gradeControls", "data-verdict", "<button", "V.split("):
+        assert gone not in screen, gone

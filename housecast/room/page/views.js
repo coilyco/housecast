@@ -171,8 +171,9 @@ function sheetBody(room, r, { now, controls = null } = {}) {
 /** A case as a sheet. `live` marks the one being graded. */
 function sheet(room, r, opts = {}) {
   const chip = opts.live ? `<span class="chip">grading</span>` : "";
+  const note = opts.note ? `<span class="sheet__note">${escapeHtml(opts.note)}</span>` : "";
   return `<article class="sheet" data-n="${r.n}" aria-label="Case ${r.n}">
-    <header class="sheet__head"><span class="sheet__num">Case ${String(r.n).padStart(2, "0")}</span>${chip}</header>
+    <header class="sheet__head"><span class="sheet__num">Case ${String(r.n).padStart(2, "0")}</span>${chip}${note}</header>
     ${sheetBody(room, r, opts)}
   </article>`;
 }

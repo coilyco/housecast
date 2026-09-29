@@ -32,23 +32,24 @@
 <main class="wrap" id="main" hidden>
   <p class="eyebrow" id="eyebrow">the room</p>
   <h1 id="title">Waiting on the presenter</h1>
-  <pre class="context" id="context" tabindex="0" aria-label="Prompt context" hidden></pre>
-  <p class="dim context__more" id="context-more" hidden></p>
   <p class="dim" id="lead"></p>
   <p class="mono" id="join" style="font-size:1.8rem;color:var(--pass)"></p>
   <ul class="cast" id="cast" aria-label="The four agents"></ul>
-  <div class="answers" id="answers" hidden></div>
-  <div class="split" id="split" hidden></div>
-  <div id="measure" hidden></div>
   <div id="eval" hidden></div>
   <p class="dim" id="foot"></p>
+</main>
+
+<!-- The case being graded, then its results, as one sheet with no buttons. -->
+<main class="wrap sheets" id="sheets" hidden>
+  <div id="sheet-top"></div>
+  <div id="sheet-old"></div>
 </main>
 
 <script src="room.js"></script>
 <script src="views.js"></script>
 <script>
 "use strict";
-const { promptById, seconds, SHOW_PROPOSALS } = window.Room;
+const { seconds, SHOW_PROPOSALS } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 const host = location.host;
@@ -93,32 +94,37 @@ function fitEval() {
 }
 window.addEventListener("resize", () => { if (!$("eval").hidden) fitEval(); });
 
-/** A long prompt gets a smaller headline, so the whole case is on the recording. */
-function lengthClass(text) {
-  const n = (text ?? "").length;
-  return n > 200 ? "xl" : n > 120 ? "l" : "";
-}
-
-/** The question is the headline. Context, if any, sits under it and scrolls in its own box. */
-// Whole lines of context that fit at 1280x720. Results keep fewer, since the room has read it.
-const CONTEXT_LINES = { grading: 14, split: 10 };
-
-function showPrompt(text, lines) {
-  const { question, context } = V.splitPrompt(text);
-  $("title").textContent = question;
-  $("title").dataset.len = lengthClass(question);
-  // Same text is not rewritten, since that would send its scroll back to the top.
-  if ($("context").textContent !== context) $("context").textContent = context;
-  $("context").hidden = !context;
-  $("context").style.setProperty("--lines", lines);
-  const extra = context ? context.split("\n").length - lines : 0;
-  $("context-more").hidden = extra <= 0;
-  $("context-more").textContent = extra > 0 ? `${extra} more ${extra === 1 ? "line" : "lines"} in the box` : "";
-}
-
 function only(...ids) {
-  for (const id of ["join", "cast", "answers", "split", "measure", "eval"]) $(id).hidden = !ids.includes(id);
+  for (const id of ["join", "cast", "eval"]) $(id).hidden = !ids.includes(id);
 }
+
+/** The newest case on top, earlier ones folded below and drawn only while open. */
+const openCases = new Set();
+
+function renderSheets(now) {
+  const rounds = [...room.rounds];
+  const cur = room.round;
+  if (room.phase === "grading" && cur?.prompt_id && !rounds.some((r) => r.n === cur.n)) rounds.push({ n: cur.n, prompt_id: cur.prompt_id });
+  const [top, ...older] = rounds.sort((a, b) => b.n - a.n);
+  $("sheets").dataset.phase = room.phase;
+  const live = room.phase === "grading";
+  const graded = live ? `${room.round.graded ?? 0} graded` : "";
+  V.setHtml($("sheet-top"), top ? V.sheet(room, top, { now, live, note: graded }) : "");
+  V.setHtml($("sheet-old"), older
+    .map((r) => {
+      const open = openCases.has(String(r.n));
+      return `<details class="sheet sheet--old" data-n="${r.n}"${open ? " open" : ""}><summary>${V.sheetLine(room, r)}</summary>${open ? V.sheetBody(room, r, { now }) : ""}</details>`;
+    })
+    .join(""));
+}
+
+$("sheet-old").addEventListener("toggle", (event) => {
+  const n = event.target.dataset?.n;
+  if (!n) return;
+  if (event.target.open) openCases.add(n);
+  else openCases.delete(n);
+  render();
+}, true);
 
 function render() {
   if (!room) return;
@@ -126,16 +132,17 @@ function render() {
   const showCloser = closer && room.phase === "closing";
   $("closer").hidden = !showCloser;
   $("opening").hidden = showCloser || room.phase !== "holding";
-  $("main").hidden = showCloser || room.phase === "holding";
+  const sheets = !showCloser && ["grading", "split"].includes(room.phase);
+  $("main").hidden = showCloser || sheets || room.phase === "holding";
+  $("sheets").hidden = !sheets;
   if (showCloser) return;
+  if (sheets) return renderSheets(now);
   if (room.phase === "holding") {
     V.setHtml($("opening-cast"), V.cast(room, { full: true }));
     $("opening-join").textContent = host;
     return;
   }
   $("main").dataset.phase = room.phase;
-  $("context").hidden = true;
-  $("context-more").hidden = true;
   const eyebrow = $("eyebrow");
   eyebrow.className = "eyebrow";
   if (room.phase === "submissions") {
@@ -150,25 +157,6 @@ function render() {
     $("join").textContent = host;
     $("foot").textContent = "";
     only("join");
-  } else if (room.phase === "grading") {
-    const prompt = promptById(room, room.round.prompt_id);
-    eyebrow.textContent = `case ${room.round.n} // grading`;
-    showPrompt(prompt?.text, CONTEXT_LINES.grading);
-    $("lead").textContent = "";
-    V.setHtml($("answers"), room.subjects.map((s) => V.answerCard(room, room.round.prompt_id, s, now)).join(""));
-    const n = room.round.graded ?? 0;
-    $("foot").textContent = `${n} graded`;
-    only("answers");
-  } else if (room.phase === "split") {
-    const last = room.rounds[room.rounds.length - 1];
-    eyebrow.textContent = `case ${last?.n ?? room.round.n} // results`;
-    const prompt = promptById(room, last?.prompt_id);
-    showPrompt(prompt?.text ?? "The results", CONTEXT_LINES.split);
-    $("lead").textContent = "";
-    V.setHtml($("split"), (last && V.split(room, last.n, { tall: 22 })) ?? "");
-    V.setHtml($("measure"), last ? V.measure(room, last.prompt_id) : "");
-    $("foot").textContent = "";
-    only("split", "measure");
   } else if (room.phase === "closing") {
     eyebrow.textContent = "the eval, this session";
     eyebrow.classList.add("eyebrow--closing");
