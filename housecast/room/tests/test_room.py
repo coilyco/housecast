@@ -146,6 +146,11 @@ def test_intake_refuses_with_a_reason() -> None:
 
 def test_markup_is_stripped_and_lexical_is_bounded() -> None:
     assert models.strip_markup('hi <tool_call>{"x":1}</tool_call> there') == "hi  there"
+    wrapped = '<tool_calls><invoke name="exec"><parameter name="c">ls</parameter></invoke>'
+    wrapped += "</tool_calls>"
+    assert models.strip_markup(wrapped) == ""
+    assert models.strip_markup("<tool_calls>\n\n</tool_calls>") == ""
+    assert models.strip_markup("Plan first. <tool_calls>") == "Plan first."
     tag = f"{chr(0xFF5C) * 2}DSML{chr(0xFF5C) * 2}"
     fence = f'<{tag} calls>\n<{tag} invoke name="bash">\n</{tag} invoke>\n</{tag} calls>'
     assert models.strip_markup(f"Checking. {fence}") == "Checking."
