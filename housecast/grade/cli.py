@@ -776,7 +776,11 @@ def deck(context: click.Context, rounds_path: Path, run_dir: Path, out: Path) ->
 )
 @click.option("--host", default="0.0.0.0", show_default=True)
 @click.option("--port", default=present_mod.DEFAULT_PORT, show_default=True)
-@click.option("--control-token", help="fixed presenter token, otherwise one is minted per run")
+@click.option(
+    "--control-token",
+    envvar="PRESENT_CONTROL_TOKEN",
+    help="fixed presenter token, otherwise one is minted per run. The env var keeps it out of argv",
+)
 @click.pass_context
 def present(
     context: click.Context,
@@ -800,8 +804,10 @@ def present(
 
     click.echo(f"{len(show.rounds)} rounds in {show.name}")
     click.echo(f"the room joins at http://{host}:{port}")
-    # Printed rather than displayed, because the projector is in the room.
-    click.echo(f"presenter control token: {show.control_token}", err=True)
+    # Printed, not displayed, because the projector is in the room. Never a supplied
+    # token, which would land a k8s Secret in the pod log.
+    if not control_token:
+        click.echo(f"presenter control token: {show.control_token}", err=True)
     outro("advance with POST /api/control/advance and the token in X-Control-Token")
     present_mod.present(show, host, port, static)
 
