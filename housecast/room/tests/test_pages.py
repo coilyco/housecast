@@ -254,3 +254,12 @@ def test_the_cases_list_opens_in_the_order_they_were_added() -> None:
     assert 'data-sort="order" aria-pressed="true">In order</button>' in present
     assert 'let sort = "order";' in present
     assert 'if (sort === "order") return list.sort((a, b) => a.seq - b.seq);' in present
+
+
+def test_the_closing_line_and_link_are_the_developer_advocates_returned_copy() -> None:
+    """The invitation ends on an email address now, on /screen and on the attendee page."""
+    for name in ("screen.html", "index.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'href="mailto:kai@coilyco.ai"' in html and "coilysiren.me/setups" not in html, name
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "one-quarter pilot" in screen and "email me at kai@coilyco.ai." in screen
