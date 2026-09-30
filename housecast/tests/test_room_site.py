@@ -26,6 +26,7 @@ def test_each_route_is_a_directory_index(tmp_path: Path) -> None:
         "screen/index.html",
         "present/index.html",
         "404.html",
+        "coilyco-kit.css",
         "room.css",
         "room.js",
         "views.js",
@@ -93,7 +94,7 @@ def test_the_split_keeps_the_presenter_off_the_public_site(tmp_path: Path) -> No
     ).read_text(encoding="utf-8")
     # Each directory carries the shared files its pages load.
     for root in ("public", "gated"):
-        for shared in ("room.css", "room.js", "views.js", "404.html"):
+        for shared in ("coilyco-kit.css", "room.css", "room.js", "views.js", "404.html"):
             assert (tmp_path / root / shared).is_file(), (root, shared)
 
 

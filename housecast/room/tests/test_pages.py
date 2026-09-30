@@ -103,7 +103,8 @@ def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> Non
     """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
-    assert "by word overlap" in views and "Jev did not answer" in views
+    assert "Word overlap" in views and "Jev did not answer" in views
+    assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
     # The presenter reads it beside the four answers, before picking.
@@ -205,6 +206,16 @@ def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
     body = present[start : present.index("\n}\n", start)]
     assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
     assert "const MAX_CASES = 100;" in present
+
+
+def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
+    """The room composes over the coilyco kit: its dark ground, loaded before room.css."""
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'data-ground="dark"' in html, name
+        assert html.index('href="coilyco-kit.css"') < html.index('href="room.css"'), name
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    assert "var(--k-ground)" in css and "#14181f" not in css
 
 
 def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:

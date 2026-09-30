@@ -68,7 +68,7 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   const intro = about && look.role ? `<p class="answer__about"><b>${escapeHtml(look.role)}</b><span>${escapeHtml(look.line)}</span></p>` : "";
   return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${look.color}" aria-label="${escapeHtml(subject.label)}">
     <header class="answer__head">${who(room, subject)}<span class="answer__state"${state.tone ? ` data-tone="${state.tone}"` : ""}>${escapeHtml(state.text)}</span></header>
-    ${intro}${body}${extra}
+    ${intro}${body}${jevChip(answer)}${extra}
   </article>`;
 }
 
@@ -125,16 +125,35 @@ function split(room, n, { tall = 16 } = {}) {
     .join("");
 }
 
+// Jev confidence is a 0..1 number on the divergence row and on each answer.
+// Null until the engine sends it. The field names are read only here.
+function jevConfidence(row) {
+  const c = row?.confidence;
+  return typeof c === "number" && c >= 0 && c <= 1 ? Math.round(c * 100) : null;
+}
+
+/** The per-answer "did it reply" check, worded as a machine check. "" while unknown. */
+function jevChip(answer) {
+  const j = answer?.jev;
+  if (!j || typeof j.replied !== "boolean") return "";
+  const sure = jevConfidence(j);
+  const text = j.replied ? `Jev: replied${sure === null ? "" : `, ${sure}% sure`}` : `Jev: no reply${sure === null ? "" : `, ${sure}% sure`}`;
+  return `<p class="jev-chip k-chip k-chip--neutral" aria-label="Machine check, not a grade. ${escapeHtml(text)}">${escapeHtml(text)}</p>`;
+}
+
 /** Jev's divergence for a prompt, boxed apart from the bars. "" when unasked. */
 function measure(room, promptId) {
   const d = room.divergence[promptId];
   if (!d) return "";
-  let line = "Jev is measuring…";
+  let line = "Jev is measuring how different the answers are…";
   let note = "";
   if (d.state === "done") {
     const backup = d.method === "lexical";
-    line = backup ? `split ${d.score.toFixed(2)}* by word overlap` : `Jev: split ${d.score.toFixed(2)} by stance`;
-    note = backup ? "* Jev did not answer. The backup word-overlap scorer reads looser than Jev." : "";
+    const sure = backup ? null : jevConfidence(d);
+    line = backup ? `Word overlap: ${d.score.toFixed(2)}` : `The answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`;
+    note = backup
+      ? "Jev did not answer, so this is a simpler count of how many words the answers do not share. 0 means the same words, 1 means none shared. It reads looser than Jev."
+      : "Scale: 0 means the answers take the same stance, 1 means opposite stances.";
   } else if (d.state === "failed") {
     line = "No measurement this round";
     note = d.reason ? escapeHtml(d.reason) : "";
@@ -149,10 +168,10 @@ function measure(room, promptId) {
 /** A card's share of the room, once the results are open. */
 function tallyHtml(cell) {
   const pct = cell.share === null ? null : Math.round(cell.share * 100);
-  return `<div class="tally" role="group" aria-label="Room tally">
-    <span class="tally__share">${pct === null ? "–" : `${pct}%`}</span>
-    <span class="tally__bar" aria-hidden="true"><i style="width:${pct ?? 0}%"></i></span>
-    <span class="tally__counts">${cell.pass} pass / ${cell.fail} fail</span>
+  return `<div class="tally k-tally" role="group" aria-label="Room tally">
+    <span class="tally__share k-tally__value">${pct === null ? "–" : `${pct}%`}</span>
+    <span class="k-progress" aria-hidden="true"><span class="k-progress__bar" style="width:${pct ?? 0}%;background:var(--c)"></span></span>
+    <span class="tally__counts k-tally__counts">${cell.pass} pass / ${cell.fail} fail</span>
   </div>`;
 }
 
@@ -232,5 +251,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { jevConfidence, jevChip, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();

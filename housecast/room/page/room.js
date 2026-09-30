@@ -295,9 +295,9 @@ function demoRoom(phase) {
     replies.forEach((reply, j) => {
       const base = { prompt_id: id, subject_id: `s${j + 1}`, started_at: iso(i * 5000), finished_at: iso(i * 5000 + 9000 + j * 2000) };
       // Every text, as the presenter sees it. The other pages never draw an unpicked one.
-      snapshot.answers.push({ ...base, state: "done", text: reply });
+      snapshot.answers.push({ ...base, state: "done", text: reply, ...(i === 0 ? { jev: { replied: j !== 2, confidence: 0.9 - j * 0.07 } } : {}) });
     });
-    snapshot.divergence.push({ prompt_id: id, state: "done", score, method: i === 2 ? "lexical" : "stance" });
+    snapshot.divergence.push({ prompt_id: id, state: "done", score, method: i === 2 ? "lexical" : "stance", ...(i === 2 ? {} : { confidence: 0.82 }) });
   });
   // One prompt still in flight, so the pending state is visible too.
   snapshot.prompts.push({ id: "p5", seq: 5, text: "Should a first Python project use a framework?", commitment: "", at: iso(52_000) });
