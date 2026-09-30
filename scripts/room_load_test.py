@@ -523,7 +523,15 @@ class Run:
         if self.args.pause_at == "grading" and n == self.args.pause_round:
             await self.pause("grading", n)
         marks["picked"] = time.monotonic()
-        record["grades"] = await self.grade_all(n, subjects)
+        # The room refuses a grade on a card with no answer, so the page draws none.
+        picked = ids[(n - 1) % len(ids)]
+        silent = {
+            a["subject_id"]
+            for a in (await self.presenter.snapshot())["answers"]
+            if a["prompt_id"] == picked and a["state"] in ("empty", "failed")
+        }
+        gradable = [s for s in subjects if s not in silent]
+        record["grades"] = await self.grade_all(n, gradable)
         marks["graded"] = time.monotonic()
         target = len(self.feeds)
         counted = await asyncio.gather(
@@ -538,7 +546,7 @@ class Run:
             self.fail(f"round {n}: an attendee saw the split while grading was open")
         marks["counted"] = time.monotonic()
         record["fanout_ms"]["split"] = await self.swap("split")
-        record["split"] = await self.check_split(n, subjects)
+        record["split"] = await self.check_split(n, gradable)
         marks["end"] = time.monotonic()
         record["steps_s"] = {
             k: round(v - marks["start"], 2) for k, v in marks.items() if k != "start"
