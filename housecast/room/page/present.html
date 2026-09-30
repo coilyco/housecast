@@ -95,6 +95,7 @@
         <p class="dim" id="detail-meta"></p>
         <div id="detail-case"></div>
         <div class="answers" id="detail-answers"></div>
+        <div id="detail-jev"></div>
         <button class="pick" id="pick" type="button" hidden></button>
         <div class="case-controls" id="case-controls" hidden>
           <button type="button" id="case-run">Run this case again</button>
@@ -241,6 +242,7 @@ function renderDetail(now) {
   $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
   V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
+  V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "");
   // A case already in a round stays, and one still answering is left to finish.
   const running = prompt && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, prompt.id, s.id).state));
   $("case-controls").hidden = !prompt || isUsed(prompt.id);

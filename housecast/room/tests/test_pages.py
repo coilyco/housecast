@@ -100,12 +100,15 @@ def test_the_screen_opens_on_kais_cover_line() -> None:
 
 
 def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:
-    """Jev's split shows once the results are open, labelled a measurement, backup marked."""
+    """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
     assert "by word overlap" in views and "Jev did not answer" in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
-    assert 'r.split ? measure(room, r.prompt_id) : ""' in body
+    assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
+    # The presenter reads it beside the four answers, before picking.
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "")' in present
 
 
 # Kai has never used the word, so the phone and the recording carry none of it. What

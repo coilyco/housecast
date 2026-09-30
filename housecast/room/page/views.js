@@ -165,7 +165,8 @@ function sheetBody(room, r, { now, controls = null } = {}) {
       return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) : ""));
     })
     .join("");
-  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${r.split ? measure(room, r.prompt_id) : ""}`;
+  // Jev's box shows as soon as a divergence row exists, so grading is not blind to it.
+  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${measure(room, r.prompt_id)}`;
 }
 
 /** A case as a sheet. `live` marks the one being graded. */
