@@ -100,7 +100,7 @@ def test_the_screen_opens_on_kais_cover_line() -> None:
 
 
 def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:
-    """Jev's split shows as soon as a divergence row exists, labelled a measurement, backup marked."""
+    """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
     assert "by word overlap" in views and "Jev did not answer" in views
@@ -208,7 +208,7 @@ def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
 
 
 def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
-    """The room is a composition over the coilyco kit: the ground is the kit's, and room.css only composes."""
+    """The room composes over the coilyco kit: its dark ground, loaded before room.css."""
     for name in ("index.html", "screen.html", "present.html"):
         html = (PAGE / name).read_text(encoding="utf-8")
         assert 'data-ground="dark"' in html, name
