@@ -86,17 +86,12 @@ def test_a_slow_answer_is_never_called_slow_or_usual() -> None:
         assert "slower than usual" not in text and "Usually about" not in text, name
 
 
-# Kai's cover line, character for character: her 06:15 self-check compares it.
-OPENING_LINE = (
-    "I've setup an array of 4 agents with separate composed personas and model backends. "
-    "We're going to be curating eval cases with the specific purpose of finding divergence "
-    "and digging into what source text is causing it."
-)
-
-
-def test_the_screen_opens_on_kais_cover_line() -> None:
+def test_the_screen_opens_on_the_title_the_lead_and_the_four_agents() -> None:
+    """Kai cut the long paragraph under the lead because it was too hard to read."""
     html = (PAGE / "screen.html").read_text(encoding="utf-8")
-    assert f'<p class="dim">{OPENING_LINE}</p>' in html
+    assert "Behavioral Divergence Evals" in html and 'class="opening__lead"' in html
+    assert 'id="opening-cast"' in html and 'id="opening-join"' in html
+    assert "I've setup an array" not in html
 
 
 def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:

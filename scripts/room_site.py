@@ -39,7 +39,7 @@ NOT_FOUND = """<!doctype html>
 <link rel="stylesheet" href="coilyco-kit.css">
 <link rel="stylesheet" href="room.css">
 </head>
-<body>
+<body class="k-page">
 <main class="wrap" id="main">
 <h1>This page isn't part of the room</h1>
 <p><a href="/">Go to the room</a></p>
