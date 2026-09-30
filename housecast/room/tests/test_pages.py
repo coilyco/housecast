@@ -289,3 +289,11 @@ def test_typed_reasons_show_on_the_attendee_results_and_the_presenter_never_on_t
     assert "reasons: true" not in screen and "roundReasons" not in screen
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert "V.roundReasons(room, last.n)" in present
+
+
+def test_each_role_in_the_cases_list_is_its_own_line_with_its_status() -> None:
+    """Kai chose one role per line, the name on the left and whether it replied on the right."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert '<span class="chips roles">${chips(p)}</span>' in present
+    assert '<span class="chip__state">${word}</span>' in present
+    assert ".roles { flex-direction: column;" in present

@@ -24,6 +24,9 @@
   .src[data-src="prepared"] { border-color: var(--closing); color: var(--closing); }
   .chip { display: inline-flex; gap: 0.3em; align-items: center; }
   .chip .logo { width: 1.5em; height: 1.5em; }
+  .roles { flex-direction: column; flex-wrap: nowrap; gap: 0.15rem; }
+  .roles .chip { display: flex; justify-content: space-between; padding: 0.1rem 0; border: 0; border-radius: 0; color: var(--text); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .roles .chip__state { color: var(--dim); }
   .sort { display: flex; gap: 0.4rem; }
   .sort .k-btn[aria-pressed="true"] { border-color: var(--k-brand); color: var(--k-text); }
   .case-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; }
@@ -170,7 +173,7 @@ function chips(prompt) {
     .map((s) => {
       const answer = answerFor(room, prompt.id, s.id);
       const word = { queued: "waiting", running: "thinking", done: "done", empty: "no answer", failed: "no answer" }[answer.state] ?? answer.state;
-      return `<span class="chip">${V.who(room, s)} ${word}</span>`;
+      return `<span class="chip">${V.who(room, s)}<span class="chip__state">${word}</span></span>`;
     })
     .join("");
 }
@@ -191,7 +194,7 @@ function renderIncoming() {
         return `<li><button type="button" data-prompt="${escapeHtml(p.id)}"${p.id === selected ? ' aria-current="true"' : ""}>
           <span>${escapeHtml(oneLine(p.text))}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
           <span class="chips"><span class="src" data-src="${escapeHtml(p.source ?? "attendee")}">${p.source === "prepared" ? "prepared" : "from the room"}</span>${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
-          <span class="chips">${chips(p)}</span></button></li>`;
+          <span class="chips roles">${chips(p)}</span></button></li>`;
       }).join("")
     : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add prepared ones above, or open proposals." : "No cases yet. Paste one above."}</li>`);
 }
