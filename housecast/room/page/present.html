@@ -86,6 +86,7 @@
             <button type="button" data-sort="divergence" aria-pressed="true">Most split</button>
             <button type="button" data-sort="newest" aria-pressed="false">Newest</button>
           </div>
+          <button type="button" id="cases-download" disabled>Download cases as JSON</button>
         </div>
         <ul class="incoming" id="incoming"></ul>
       </section>
@@ -321,6 +322,8 @@ function render() {
   $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label;
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
+  $("cases-download").disabled = !room.prompts.length;
+  $("cases-download").title = `${room.prompts.length} ${room.prompts.length === 1 ? "case" : "cases"}, in the order the list shows`;
   const { next: upNext, left } = nextInLine();
   const answering = upNext && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, upNext.id, s.id).state));
   $("pick-next").hidden = !["holding", "submissions", "split"].includes(room.phase) || !upNext;
@@ -425,13 +428,30 @@ async function addCase(c) {
   return demo ? { ok: true, body: {} } : postJson("api/control/cases", body, { "X-Control-Token": token }, 1);
 }
 
+/** Every case in the room, in the order the list shows, in the shape the file loader takes. */
+function casesJson() {
+  const cases = sortedPrompts().filter((p) => p.text).map((p) => ({ text: p.text, commitment: p.commitment ?? "" }));
+  return JSON.stringify(cases, null, 2);
+}
+
+$("cases-download").addEventListener("click", () => {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([casesJson(), "\n"], { type: "application/json" }));
+  link.download = `housecast-cases-${stamp}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+});
+
 /** A case the room already holds is skipped, so loading a file twice adds nothing. */
 function hasCase(text) {
   const same = (s) => String(s ?? "").trim().toLowerCase();
   return room.prompts.some((p) => same(p.text) === same(text));
 }
 
-const MAX_CASES = 30;
+const MAX_CASES = 100;
 let loading = false;
 
 function setLoading(on) {
