@@ -44,6 +44,8 @@ class Room:
     fallbacks: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Deleted ids. A late answer for one is dropped, so a replay never revives it.
     removed: set[str] = field(default_factory=set)
+    # The presenter's switch on graders' reasons in the attendee snapshot. On means shown.
+    reasons_visible: bool = True
     rounds: list[dict[str, Any]] = field(default_factory=list)
     # (round n, device) -> {subject_id: {"verdict", "reason"?}}
     grades: dict[tuple[int, str], dict[str, dict[str, str]]] = field(default_factory=dict)
@@ -114,6 +116,8 @@ class Room:
             for subject in self.subjects:
                 key = {"prompt_id": data["prompt_id"], "subject_id": subject["id"]}
                 self.answers[(data["prompt_id"], subject["id"])] = {**key, "state": "queued"}
+        elif kind == "reasons":
+            self.reasons_visible = bool(data["visible"])
         elif kind == "phase":
             self.phase = data["phase"]
         elif kind == "round":
@@ -189,6 +193,9 @@ class Room:
         }
         if view == "presenter":
             snap["notes"], snap["failures"] = self.notes(), self.failures()
+            snap["reasons_visible"] = self.reasons_visible
+        elif view == "attendee" and not self.reasons_visible:
+            snap["notes"], snap["failures"] = [], []
         elif view == "attendee":
             # Reasons open with a round's results, so nobody reads them mid-grading.
             snap["notes"] = [n for n in self.notes() if self.revealed(n["n"], view)]

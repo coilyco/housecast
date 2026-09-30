@@ -314,6 +314,12 @@ class Engine:
             self._spawn(self._answer(prompt, subject))
         return {"id": prompt_id}
 
+    def set_reasons(self, visible: bool) -> bool:
+        """Show or hide graders' reasons on the attendee snapshot. Grades and tallies stay."""
+        if visible != self.room.reasons_visible:
+            self.room.emit("reasons", {"visible": visible})
+        return self.room.reasons_visible
+
     def set_phase(self, phase: str) -> None:
         if phase not in PHASES:
             raise PromptRefusedError(f"a phase is one of {', '.join(PHASES)}")

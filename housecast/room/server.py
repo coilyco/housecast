@@ -55,6 +55,10 @@ class PhaseChange(BaseModel):
     phase: str
 
 
+class ReasonsSwitch(BaseModel):
+    visible: bool
+
+
 class Pick(BaseModel):
     prompt_id: str
 
@@ -270,6 +274,13 @@ def create_app(
         except PromptRefusedError as refused:
             return refuse(refused)
         return {"phase": room.phase}
+
+    @app.post("/api/control/reasons", response_model=None)
+    async def set_reasons(
+        switch: ReasonsSwitch, x_control_token: str | None = Header(default=None)
+    ) -> dict[str, Any]:
+        presenter(x_control_token)
+        return {"visible": state["engine"].set_reasons(switch.visible)}
 
     @app.post("/api/control/pick", response_model=None)
     async def pick(
