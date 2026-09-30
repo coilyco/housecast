@@ -180,3 +180,35 @@ def test_the_exit_code_follows_the_verdict(capsys: pytest.CaptureFixture[str]) -
     with origin({**PUBLIC, "/": (500, "")}, seen) as pub, origin(GATED, seen) as gate:
         assert _load().main(["--public", pub, "--gated", gate]) == 1
     assert "FAIL public /: status 500, wanted 200" in capsys.readouterr().out
+
+
+class _Context:
+    """Stands in for an SSLContext: what its trust store holds and which bundles it was given."""
+
+    def __init__(self, holds: int) -> None:
+        self.holds = holds
+        self.loaded: list[str] = []
+
+    def cert_store_stats(self) -> dict[str, int]:
+        return {"x509_ca": self.holds}
+
+    def load_verify_locations(self, cafile: str) -> None:
+        self.loaded.append(cafile)
+
+
+@pytest.mark.parametrize(
+    ("holds", "bundle_exists", "loads"),
+    [(0, True, True), (194, True, False), (0, False, False)],
+)
+def test_the_system_bundle_is_added_only_when_the_default_trust_is_empty(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, holds: int, bundle_exists: bool, loads: bool
+) -> None:
+    tool = _load()
+    bundle = tmp_path / "cert.pem"
+    if bundle_exists:
+        bundle.write_text("")
+    context = _Context(holds)
+    monkeypatch.setattr(tool.ssl, "create_default_context", lambda: context)
+    monkeypatch.setattr(tool, "CA_FALLBACK", str(bundle))
+    assert tool.tls_context() is context
+    assert context.loaded == ([str(bundle)] if loads else [])

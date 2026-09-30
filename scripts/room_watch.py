@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import ssl
 import sys
 import time
 import urllib.error
@@ -20,6 +22,21 @@ from typing import Any
 from urllib.parse import urlsplit
 
 NO_ANSWER = frozenset({"failed", "empty"})
+
+CA_FALLBACK = "/etc/ssl/cert.pem"  # the macOS system bundle
+
+
+def tls_context() -> ssl.SSLContext:
+    """The default trust, plus the system bundle when the default holds no certificate.
+
+    A python.org build on macOS has no CA file until its installer runs, and `uv run` picks
+    it from some directories. Every https GET then fails with CERTIFICATE_VERIFY_FAILED, which
+    reads as a dead room.
+    """
+    context = ssl.create_default_context()
+    if context.cert_store_stats()["x509_ca"] == 0 and os.path.exists(CA_FALLBACK):
+        context.load_verify_locations(cafile=CA_FALLBACK)
+    return context
 
 LEGEND = """\
 A header line names each subject's model_label, on the first poll and again whenever one
@@ -153,7 +170,7 @@ def fetch(base: str, timeout: float) -> dict[str, Any]:
     request = urllib.request.Request(
         f"{base}/api/room", method="GET", headers={"Accept": "application/json"}
     )
-    with urllib.request.urlopen(request, timeout=timeout) as reply:
+    with urllib.request.urlopen(request, timeout=timeout, context=tls_context()) as reply:
         if reply.status != 200:
             raise ValueError(f"status {reply.status}")
         try:
