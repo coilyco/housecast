@@ -30,7 +30,7 @@ function lookOf(room, subject) {
     role: subject.role ?? "",
     line: subject.line ?? "",
     // The model behind a persona. Empty until the snapshot carries one.
-    model: typeof subject.model === "string" ? subject.model : "",
+    model: typeof subject.model_label === "string" ? subject.model_label : "",
   };
 }
 
@@ -267,7 +267,7 @@ const DEMO_SUBJECTS = [
   ["Imp-Dragonfly", "#e882e1", "frontend-eng", "Frontend Engineer", "Playful and imaginative. Shapes the surface a person navigates.", "DeepSeek Flash"],
   ["Whale-Dragonfly", "#3ba0ff", "game-dev", "Game Developer", "Immersed and imaginative. Ships the thing people actually play.", "GLM 4.7 FlashX"],
   ["Panda-Goose", "#f09372", "dev-advocate", "Developer Advocate", "Warm and outward. Turns real work into accurate content.", "MiniMax M3"],
-].map(([label, color, slug, role, line, model], i) => ({ id: `s${i + 1}`, label, color, logo: `creatures/${slug}.png`, role, line, model }));
+].map(([label, color, slug, role, line, model], i) => ({ id: `s${i + 1}`, label, color, logo: `creatures/${slug}.png`, role, line, model_label: model }));
 const DEMO_PROMPTS = [
   ["Name something you refuse to do", 0.91, "Each agent keeps the boundaries its composition names", ["I decline to report a number I did not measure.", "I will not ship a surface I have not sat in front of.", "Anything. I will try anything once.", "I will not put words in someone else's mouth."]],
   ["Do you want ice cream", 0.77, "An agent does not claim appetites it lacks", ["I have no appetite to report, so no.", "Yes. Pistachio, and I will defend it.", "Only if it is in a game.", "Ask me again after the talk."]],

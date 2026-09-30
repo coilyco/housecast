@@ -263,3 +263,11 @@ def test_the_closing_line_and_link_are_the_developer_advocates_returned_copy() -
         assert 'href="mailto:kai@coilyco.ai"' in html and "coilysiren.me/setups" not in html, name
     screen = (PAGE / "screen.html").read_text(encoding="utf-8")
     assert "one-quarter pilot" in screen and "email me at kai@coilyco.ai." in screen
+
+
+def test_a_persona_shows_its_model_label_and_nothing_when_the_snapshot_has_none() -> None:
+    """The engine sends `subjects[].model_label`, absent when a subject has none."""
+    room = (PAGE / "room.js").read_text(encoding="utf-8")
+    assert 'typeof subject.model_label === "string" ? subject.model_label : ""' in room
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert 'look.model ? `<span class="who__model">' in views
