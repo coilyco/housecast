@@ -131,13 +131,15 @@ function render() {
   const now = Date.now();
   const showCloser = closer && room.phase === "closing";
   $("closer").hidden = !showCloser;
-  $("opening").hidden = showCloser || room.phase !== "holding";
+  // With proposals hidden, submissions is the same waiting room as holding, so it opens on the cover.
+  const opening = room.phase === "holding" || (room.phase === "submissions" && !SHOW_PROPOSALS);
+  $("opening").hidden = showCloser || !opening;
   const sheets = !showCloser && ["grading", "split"].includes(room.phase);
-  $("main").hidden = showCloser || sheets || room.phase === "holding";
+  $("main").hidden = showCloser || sheets || opening;
   $("sheets").hidden = !sheets;
   if (showCloser) return;
   if (sheets) return renderSheets(now);
-  if (room.phase === "holding") {
+  if (opening) {
     V.setHtml($("opening-cast"), V.cast(room, { full: true }));
     $("opening-join").textContent = host;
     return;
