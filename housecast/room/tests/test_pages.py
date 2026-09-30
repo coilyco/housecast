@@ -103,7 +103,7 @@ def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> Non
     """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
-    assert "Word overlap" in views and "Jev did not answer" in views
+    assert "by word overlap" in views and "Jev did not answer" in views
     assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
@@ -223,6 +223,14 @@ def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:
     screen = (PAGE / "screen.html").read_text(encoding="utf-8")
     assert 'room.phase === "submissions" && !SHOW_PROPOSALS' in screen
     assert '$("main").hidden = showCloser || sheets || opening;' in screen
+
+
+def test_jev_says_how_many_replied_in_one_line_and_nothing_until_the_engine_sends_it() -> None:
+    """Kai chose one line in the box over a chip on every card, hidden until every check exists."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "function jevReplied(" in views and "jev-chip" not in views
+    assert 'checks.some((j) => typeof j?.replied !== "boolean")) return null' in views
+    assert "Math.min(...sure)" in views and "of ${replied.of} replied" in views
 
 
 def test_a_card_with_no_answer_offers_no_grade() -> None:
