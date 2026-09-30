@@ -14,7 +14,8 @@ class SubjectsError(ValueError):
 
 def load_subjects(path: Path) -> list[dict[str, str]]:
     """Each subject is `{id, label, system}` or `{id, label, system_file}`, plus optional
-    `color`, `emblem`, `logo`, `role`, and `line` for the page.
+    `color`, `emblem`, `logo`, `role`, and `line` for the page, and `model_label`, the
+    provider's name for the model, which is the only model text a snapshot carries.
 
     `label` is what a room shows, so it is required and never derived from `id`.
     A `system_file` resolves against the subjects file's own directory.
@@ -46,7 +47,23 @@ def load_subjects(path: Path) -> list[dict[str, str]]:
         subjects.append(subject)
         if "model" in entry:  # optional route for this subject, never shown. docs/room.md
             subject["model"] = _model_of(entry["model"], f"{path}: subject {sid!r}")
+        if entry.get("model_label"):  # the one model text a page may show. docs/room-models.md
+            subject["model_label"] = _label_of(entry["model_label"], f"{path}: subject {sid!r}")
     return subjects
+
+
+MAX_MODEL_LABEL = 60
+
+
+def _label_of(label: object, where: str) -> str:
+    """A provider's name for the model, in words. A route id is `family/name`, so no slash."""
+    text = label.strip() if isinstance(label, str) else ""
+    if not text or len(text) > MAX_MODEL_LABEL or any(c in text for c in "/<>\n\r\t"):
+        raise SubjectsError(
+            f"{where} has a model_label that is not a plain name of at most "
+            f"{MAX_MODEL_LABEL} characters with no slash"
+        )
+    return text
 
 
 def _model_of(model: object, where: str) -> str:

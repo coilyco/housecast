@@ -46,9 +46,6 @@
     <p class="eyebrow eyebrow--live" id="phase-label"></p>
     <button class="next k-btn k-btn--primary" id="next" type="button"></button>
     <button class="next k-btn k-btn--primary" id="pick-next" type="button" hidden></button>
-    <label class="dim">Jump to
-      <select class="k-select" id="jump" aria-label="Jump the room to a phase"></select>
-    </label>
     <button class="next k-btn k-btn--primary" id="finish" type="button" hidden>Finish: show the eval table</button>
     <p class="status" id="status" role="status"></p>
   </header>
@@ -75,7 +72,8 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
           <h2 id="incoming-title">Cases</h2>
           <div class="sort" role="group" aria-label="Sort prompts">
-            <button class="k-btn k-btn--ghost" type="button" data-sort="divergence" aria-pressed="true">Most different</button>
+            <button class="k-btn k-btn--ghost" type="button" data-sort="order" aria-pressed="true">In order</button>
+            <button class="k-btn k-btn--ghost" type="button" data-sort="divergence" aria-pressed="false">Most different</button>
             <button class="k-btn k-btn--ghost" type="button" data-sort="newest" aria-pressed="false">Newest</button>
           </div>
           <button class="k-btn k-btn--ghost" type="button" id="cases-download" disabled>Download cases as JSON</button>
@@ -109,7 +107,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { PHASES, promptById, answerFor, seconds, escapeHtml, postJson, SHOW_PROPOSALS, CASE_MAX } = window.Room;
+const { promptById, answerFor, seconds, escapeHtml, postJson, SHOW_PROPOSALS, CASE_MAX } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -118,7 +116,7 @@ let token = null;
 let room = null;
 let link = { live: true };
 let selected = null;
-let sort = "divergence";
+let sort = "order";
 
 // A token in the address is taken once and dropped from the URL bar. It is kept
 // in localStorage, so a reload, a crashed tab, or a new tab keeps control.
@@ -161,6 +159,7 @@ async function control(path, body, method = "POST") {
 
 function sortedPrompts() {
   const list = [...room.prompts];
+  if (sort === "order") return list.sort((a, b) => a.seq - b.seq);
   if (sort === "newest") return list.reverse();
   const score = (p) => (room.divergence[p.id]?.state === "done" ? room.divergence[p.id].score : -1);
   return list.sort((a, b) => score(b) - score(a) || b.seq - a.seq);
@@ -262,11 +261,12 @@ function renderRound() {
     $("round-title").textContent = `Case ${last?.n ?? room.round.n}: results`;
     $("round-meta").textContent = promptById(room, last?.prompt_id)?.text ?? "";
     V.setHtml($("round-split"), (last && V.split(room, last.n, { tall: 10 })) ?? "");
+    V.setHtml($("round-failures"), last ? V.roundReasons(room, last.n) : "");
   } else if (room.phase === "closing") {
     $("round-title").textContent = "The eval, with the reasons";
     $("round-meta").textContent = "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.";
     V.setHtml($("round-eval"), V.evalTable(room));
-    V.setHtml($("round-failures"), V.failures(room));
+    V.setHtml($("round-failures"), V.failures(room) + V.notes(room));
   }
 }
 
@@ -309,7 +309,7 @@ function render() {
   }
   // Attendees read the round being opened, so submissions names the next one.
   const shown = room.phase === "submissions" ? room.round.n + 1 : room.round.n;
-  $("phase-label").textContent = `phase // ${room.phase}${shown ? ` // case ${shown}` : ""}`;
+  $("phase-label").textContent = shown ? `Case ${shown}` : "No case yet";
   const pick = pickInfo(now);
   const next = NEXT[room.phase];
   // In closing the primary raises the closer, since going back to holding resets the room.
@@ -325,7 +325,6 @@ function render() {
   $("pick-next").disabled = Boolean(answering);
   $("pick-next").textContent = answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`;
   $("pick-next").title = upNext ? oneLine(upNext.text) : "";
-  V.setHtml($("jump"), PHASES.map((p) => `<option value="${p}"${p === room.phase ? " selected" : ""}>${p}</option>`).join(""));
   if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
@@ -391,9 +390,6 @@ $("pick-next").addEventListener("click", () => {
   void control("pick", { prompt_id: upNext.id });
 });
 $("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
-$("jump").addEventListener("change", (event) => {
-  if (event.target.value !== room.phase) void control("phase", { phase: event.target.value });
-});
 $("case-run").addEventListener("click", () => {
   if (selected) void control(`cases/${selected}/run`, {});
 });

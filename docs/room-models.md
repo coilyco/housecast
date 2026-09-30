@@ -6,7 +6,7 @@ Both are off until set, and with neither set every subject answers on `ROOM_MODE
 
 A subject may carry a `model` in `subjects.json`, which replaces `ROOM_MODEL` for that subject alone:
 `{"id": "gem", "label": "Violet", "system_file": "gem.md", "model": "evaluation/mistral-medium-3.5"}`.
-The room never shows it. Snapshots and the event stream drop `model` the way they drop `system`.
+The room never shows it. Snapshots and the event stream drop `model` the way they drop `system`. A subject may also carry `model_label`, the provider's name for the model such as "GLM-4.7-FlashX", the only model text a snapshot shows. It is a plain name of at most 60 characters with no slash, so a route id is refused at load.
 
 ## The fallback
 

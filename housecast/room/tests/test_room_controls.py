@@ -94,7 +94,8 @@ def test_running_a_case_again_asks_every_subject_and_scores_it_in_the_log(tmp_pa
     assert (ran.status_code, ran.json()) == (202, {"id": case})
     assert before == len(SUBJECTS)
     assert len([c for c in calls if c == "/v1/chat/completions"]) == 2 * len(SUBJECTS)
-    assert len([c for c in calls if c == "/v1/systemone"]) == 2
+    # Each round: one reply check per answer with text, then one divergence call.
+    assert len([c for c in calls if c == "/v1/systemone"]) == 2 * (len(SUBJECTS) + 1)
     assert [d["state"] for d in snap["divergence"]] == ["done"]
     assert {a["state"] for a in snap["answers"]} == {"done"}
     kinds = [json.loads(line)["kind"] for line in log.read_text().splitlines()]

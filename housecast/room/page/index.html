@@ -51,7 +51,7 @@
     <h2 class="closing__sub" id="closing-broke-title" hidden>What broke, in the room's words</h2>
     <ul class="failures" id="closing-list"></ul>
     <ul class="links" id="closing-links" aria-label="Links">
-      <li><a href="https://coilysiren.me/setups">coilysiren.me/setups</a></li>
+      <li><a href="mailto:kai@coilyco.ai">kai@coilyco.ai</a></li>
       <li><a href="https://github.com/coilyco/housecast">github.com/coilyco/housecast</a></li>
     </ul>
   </section>
@@ -190,12 +190,12 @@ function render() {
   // A redraw while someone types a reason would drop their cursor, so it waits.
   const typing = live && document.activeElement?.tagName === "TEXTAREA" && $("live-case").contains(document.activeElement);
   const held = live && document.activeElement?.dataset?.verdict ? `button[data-subject="${CSS.escape(document.activeElement.dataset.subject)}"][data-verdict="${CSS.escape(document.activeElement.dataset.verdict)}"]` : null;
-  if (!typing) V.setHtml($("live-case"), top ? V.sheet(room, top, { now, live, controls: live ? gradeControls : null }) : "");
+  if (!typing) V.setHtml($("live-case"), top ? V.sheet(room, top, { now, live, reasons: true, controls: live ? gradeControls : null }) : "");
   if (held) $("live-case").querySelector(held)?.focus();
   V.setHtml($("old-cases"), older
     .map((r) => {
       const open = openCases.has(String(r.n));
-      return `<details class="sheet sheet--old" data-n="${r.n}"${open ? " open" : ""}><summary>${V.sheetLine(room, r)}</summary>${open ? V.sheetBody(room, r, { now }) : ""}</details>`;
+      return `<details class="sheet sheet--old" data-n="${r.n}"${open ? " open" : ""}><summary>${V.sheetLine(room, r)}</summary>${open ? V.sheetBody(room, r, { now, reasons: true }) : ""}</details>`;
     })
     .join(""));
 }

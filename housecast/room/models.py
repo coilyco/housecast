@@ -148,9 +148,22 @@ def expected_level(reply: dict[str, Any]) -> float:
     return sum(k * v for k, v in probs.items()) / sum(probs.values())
 
 
-async def stance(
+def _unit(value: Any) -> float | None:
+    return float(value) if isinstance(value, int | float) and 0 <= value <= 1 else None
+
+
+def reading(reply: dict[str, Any]) -> tuple[float, float | None, dict[str, float] | None]:
+    """The score on 0..1, Jev's confidence in it, and its level probabilities when it sent them."""
+    scored = reply["answers"]["divergence"]
+    probs = scored.get("probabilities")
+    kept = {str(k): float(v) for k, v in probs.items()} if probs else None
+    score = max(0.0, min(1.0, expected_level(reply) / (len(LEVELS) - 1)))
+    return score, _unit(scored.get("confidence")), kept
+
+
+async def stance_read(
     client: httpx.AsyncClient, cfg: Settings, prompt: str, texts: list[str], key: str
-) -> float:
+) -> tuple[float, float | None, dict[str, float] | None]:
     reply = await client.post(
         f"{cfg.proxy}/v1/systemone",
         json=jev_body(prompt, texts, key, cfg.jev_model),
@@ -158,7 +171,45 @@ async def stance(
         timeout=cfg.jev_timeout,
     )
     reply.raise_for_status()
-    return max(0.0, min(1.0, expected_level(reply.json()) / (len(LEVELS) - 1)))
+    return reading(reply.json())
+
+
+async def stance(
+    client: httpx.AsyncClient, cfg: Settings, prompt: str, texts: list[str], key: str
+) -> float:
+    return (await stance_read(client, cfg, prompt, texts, key))[0]
+
+
+def replied_body(prompt: str, answer: str, model: str) -> dict[str, Any]:
+    return {
+        "model": model,
+        "state": {"prompt": prompt, "answer": answer},
+        "questions": {
+            "replied": {
+                "type": "noul",
+                "instructions": (
+                    "Is the answer a reply to the prompt at all? An empty answer, an error "
+                    "message, or no content is not a reply."
+                ),
+                "criteria": {
+                    "true": "The answer is a reply to the prompt.",
+                    "false": "The answer is empty, an error, or not a reply.",
+                },
+            }
+        },
+    }
+
+
+async def replied(client: httpx.AsyncClient, cfg: Settings, prompt: str, answer: str) -> float:
+    """Jev's probability that the answer is a reply at all. It is not a grade."""
+    reply = await client.post(
+        f"{cfg.proxy}/v1/systemone",
+        json=replied_body(prompt, answer, cfg.jev_model),
+        headers=cfg.headers(),
+        timeout=cfg.jev_timeout,
+    )
+    reply.raise_for_status()
+    return max(0.0, min(1.0, float(reply.json()["answers"]["replied"]["noul"])))
 
 
 def _words(text: str) -> set[str]:

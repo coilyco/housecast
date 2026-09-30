@@ -55,7 +55,7 @@ def test_earlier_cases_can_only_read() -> None:
     render = html[html.index("function render()") :]
     start = render.index('$("old-cases")')
     old = render[start : render.index("\n}\n", start)]
-    assert "V.sheetBody(room, r, { now })" in old  # no controls argument
+    assert "V.sheetBody(room, r, { now, reasons: true })" in old  # reasons, no controls
     assert "gradeControls" not in old and "data-verdict" not in old
     # Only the case being graded is handed the controls, and only while grading is open.
     assert "controls: live ? gradeControls : null" in render
@@ -69,7 +69,7 @@ def test_the_tally_shows_only_once_the_results_are_open() -> None:
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "const cells = r.split ? splitFor(room, r.n) : null;" in body
-    assert 'cell ? tallyHtml(cell) : ""' in body
+    assert 'cell ? tallyHtml(cell) + said : ""' in body and "cell && reasons ? reasonsHtml(" in body
 
 
 def test_no_run_status_reads_like_a_grade() -> None:
@@ -103,7 +103,7 @@ def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> Non
     """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
-    assert "Word overlap" in views and "Jev did not answer" in views
+    assert "word overlap" in views and "Jev did not answer" in views
     assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
@@ -225,6 +225,14 @@ def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:
     assert '$("main").hidden = showCloser || sheets || opening;' in screen
 
 
+def test_jev_says_how_many_replied_in_one_line_and_nothing_until_the_engine_sends_it() -> None:
+    """Kai chose one line in the box over a chip on every card, hidden until every check exists."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "function jevReplied(" in views and "jev-chip" not in views
+    assert 'checks.some((j) => typeof j?.replied !== "boolean")) return null' in views
+    assert "Math.min(...sure)" in views and "${replied.replied}/${replied.of} replied" in views
+
+
 def test_a_card_with_no_answer_offers_no_grade() -> None:
     """The engine counts any grade, so an empty or failed answer must not be gradable."""
     html = (PAGE / "index.html").read_text(encoding="utf-8")
@@ -246,3 +254,54 @@ def test_the_reason_hint_says_others_will_see_it_after_results() -> None:
     html = (PAGE / "index.html").read_text(encoding="utf-8")
     assert "Others in the room will see this after results." in html
     assert "Only the presenter reads it." not in html and "eval table at the end" not in html
+
+
+def test_jevs_box_is_one_line_with_a_meter_and_the_explanation_on_hover() -> None:
+    """Kai asked for about 40 characters: the scale is a meter, the words are the title."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function measure(") : views.index("/** A card's share")]
+    assert 'class="measure__meter"' in body and 'title="${escapeHtml(title)}"' in body
+    assert "·" not in body
+
+
+def test_the_cases_list_opens_in_the_order_they_were_added() -> None:
+    """Kai loads anchors first, so oldest-first is the default and Pick next follows it."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'data-sort="order" aria-pressed="true">In order</button>' in present
+    assert 'let sort = "order";' in present
+    assert 'if (sort === "order") return list.sort((a, b) => a.seq - b.seq);' in present
+
+
+def test_the_closing_line_and_link_are_the_developer_advocates_returned_copy() -> None:
+    """The invitation ends on an email address now, on /screen and on the attendee page."""
+    for name in ("screen.html", "index.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'href="mailto:kai@coilyco.ai"' in html and "coilysiren.me/setups" not in html, name
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "one-quarter pilot" in screen and "email me at kai@coilyco.ai." in screen
+
+
+def test_a_persona_shows_its_model_label_and_nothing_when_the_snapshot_has_none() -> None:
+    """The engine sends `subjects[].model_label`, absent when a subject has none."""
+    room = (PAGE / "room.js").read_text(encoding="utf-8")
+    assert 'typeof subject.model_label === "string" ? subject.model_label : ""' in room
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert 'look.model ? `<span class="who__model">' in views
+
+
+def test_the_presenter_reads_pass_reasons_and_the_room_pages_never_draw_them() -> None:
+    """PASS reasons come as `notes` on the presenter snapshot, and only /present draws them."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "V.failures(room) + V.notes(room)" in present
+    for name in ("index.html", "screen.html"):
+        assert "V.notes(" not in (PAGE / name).read_text(encoding="utf-8"), name
+
+
+def test_typed_reasons_show_on_the_attendee_results_and_the_presenter_never_on_the_screen() -> None:
+    """Kai: attendees and /present read what the room said, and /screen shows counts only."""
+    index = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert "reasons: true" in index
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "reasons: true" not in screen and "roundReasons" not in screen
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "V.roundReasons(room, last.n)" in present
