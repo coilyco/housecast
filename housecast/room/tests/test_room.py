@@ -73,6 +73,8 @@ def test_fan_out_records_every_subject_and_scores_with_jev(tmp_path: Path) -> No
         "state": "done",
         "score": 0.5,
         "method": "stance",
+        "confidence": None,
+        "probabilities": None,
     }
 
 

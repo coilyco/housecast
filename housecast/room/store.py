@@ -187,6 +187,8 @@ class Room:
                 for r in self.rounds
             ],
         }
+        if view == "presenter":
+            snap["notes"] = self.notes()
         if view == "presenter" or self.phase == "closing":
             failures = self.failures()
             # The recorded screen gets who failed, not the words, until Kai rules.
@@ -194,6 +196,15 @@ class Room:
                 failures = [{k: v for k, v in f.items() if k != "reason"} for f in failures]
             snap["failures"] = failures
         return snap
+
+    def notes(self) -> list[dict[str, Any]]:
+        """What graders wrote against a PASS. The presenter reads it, no other view does."""
+        return [
+            {"n": n, "subject_id": subject_id, "verdict": "pass", "reason": mark["reason"]}
+            for (n, _), marks in self.grades.items()
+            for subject_id, mark in marks.items()
+            if mark["verdict"] == "pass" and mark.get("reason")
+        ]
 
     def failures(self) -> list[dict[str, Any]]:
         return [
