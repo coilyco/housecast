@@ -109,3 +109,64 @@ def test_a_case_still_running_refuses_a_second_run() -> None:
         room.divergence[case] = {"prompt_id": case, "state": "scoring"}
         busy = tc.post(f"{CASES}/{case}/run", headers=HEADERS)
     assert (busy.status_code, busy.json()) == (409, {"reason": "that case is still running"})
+
+
+REASONS = "/api/control/reasons"
+
+
+def graded_case(tc: TestClient) -> None:
+    case = add(tc, "a case")
+    tc.get("/api/control/room", headers=HEADERS)
+    tc.post("/api/control/pick", json={"prompt_id": case}, headers=HEADERS)
+    body = {
+        "round": 1,
+        "device": "d1",
+        "grades": {"s1": "fail", "s2": "pass"},
+        "reasons": {"s1": "Hedged.", "s2": "Named it."},
+    }
+    assert tc.post("/api/grades", json=body).status_code == 200
+    tc.post("/api/control/phase", json={"phase": "split"}, headers=HEADERS)
+
+
+def test_the_reasons_switch_needs_the_token_and_a_boolean() -> None:
+    tc, room, _ = controlled()
+    with tc:
+        assert tc.post(REASONS, json={"visible": False}).status_code == 403
+        assert tc.post(REASONS, json={"visible": "maybe"}, headers=HEADERS).status_code == 422
+        assert tc.post(REASONS, json={}, headers=HEADERS).status_code == 422
+    assert room.reasons_visible is True
+
+
+def test_hiding_reasons_empties_them_for_attendees_only_and_keeps_every_grade(
+    tmp_path: Path,
+) -> None:
+    log = tmp_path / "room.jsonl"
+    tc, room, _ = controlled(log)
+    with tc:
+        graded_case(tc)
+        shown = tc.get("/api/room").json()
+        assert [f["reason"] for f in shown["failures"]] == ["Hedged."] and len(shown["notes"]) == 1
+        assert tc.get("/api/control/room", headers=HEADERS).json()["reasons_visible"] is True
+        off = tc.post(REASONS, json={"visible": False}, headers=HEADERS)
+        assert (off.status_code, off.json()) == (200, {"visible": False})
+        hidden = tc.get("/api/room").json()
+        assert hidden["notes"] == [] and hidden["failures"] == []
+        assert "Hedged." not in json.dumps(hidden) and "Named it." not in json.dumps(hidden)
+        assert hidden["rounds"][0]["split"] == shown["rounds"][0]["split"]
+        presenter = tc.get("/api/control/room", headers=HEADERS).json()
+        assert presenter["reasons_visible"] is False
+        assert [f["reason"] for f in presenter["failures"]] == ["Hedged."]
+        assert [n["reason"] for n in presenter["notes"]] == ["Named it."]
+        assert "reasons_visible" not in hidden
+        on = tc.post(REASONS, json={"visible": True}, headers=HEADERS)
+        assert on.json() == {"visible": True}
+        assert [f["reason"] for f in tc.get("/api/room").json()["failures"]] == ["Hedged."]
+        # Setting a switch to the value it has logs nothing.
+        rev = room.rev
+        tc.post(REASONS, json={"visible": True}, headers=HEADERS)
+        assert room.rev == rev
+        tc.post(REASONS, json={"visible": False}, headers=HEADERS)
+    replay = Room(subjects=SUBJECTS, log_path=log)
+    replay.load()
+    assert replay.reasons_visible is False
+    assert replay.snapshot("attendee")["failures"] == []
