@@ -65,7 +65,7 @@
 <script src="views.js"></script>
 <script>
 "use strict";
-const { promptById, device, postJson, escapeHtml, seconds, PROMPT_MAX, REASON_MAX, SHOW_PROPOSALS } = window.Room;
+const { promptById, answerFor, device, postJson, escapeHtml, seconds, PROMPT_MAX, REASON_MAX, SHOW_PROPOSALS } = window.Room;
 const V = window.RoomViews;
 const $ = (id) => document.getElementById(id);
 
@@ -126,6 +126,9 @@ function paintSaved(id) {
 }
 
 function gradeControls(subject) {
+  // An agent that returned nothing has nothing to grade, and a grade would still be counted.
+  const state = answerFor(room, room.round.prompt_id, subject.id).state;
+  if (state === "empty" || state === "failed") return `<p class="answer__reason">No answer to grade.</p>`;
   const mineNow = grades[subject.id] ?? {};
   const pressed = (v) => (mineNow.verdict === v ? "true" : "false");
   const reason = mineNow.verdict === "fail"

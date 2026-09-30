@@ -231,3 +231,10 @@ def test_jev_says_how_many_replied_in_one_line_and_nothing_until_the_engine_send
     assert "function jevReplied(" in views and "jev-chip" not in views
     assert 'checks.some((j) => typeof j?.replied !== "boolean")) return null' in views
     assert "Math.min(...sure)" in views and "of ${replied.of} replied" in views
+
+
+def test_a_card_with_no_answer_offers_no_grade() -> None:
+    """The engine counts any grade, so an empty or failed answer must not be gradable."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
+    assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
