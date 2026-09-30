@@ -204,7 +204,6 @@ p { margin: 0; }
 
 /* ----------------------------------------------------------- the case */
 .case { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.9rem 1rem; border-radius: 12px; background: var(--card); border-left: 6px solid var(--focus); }
-.case__tests { font-weight: 600; overflow-wrap: anywhere; }
 .case__label { font-family: var(--mono); font-size: 0.85em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .case__text { color: var(--soft); overflow-wrap: anywhere; }
 .case__text, #title { white-space: pre-wrap; }

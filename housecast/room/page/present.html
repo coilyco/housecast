@@ -54,22 +54,16 @@
   </header>
   <main class="wrap k-dense" style="max-width:90rem">
     <p class="banner" id="banner" role="status" hidden></p>
-    <details class="panel" id="cases-panel">
-      <summary><h2 style="display:inline">Add cases</h2></summary>
+    <section class="panel" id="cases-panel" aria-labelledby="add-title">
+      <h2 id="add-title">Add cases</h2>
       <p class="dim">A case is answered ahead of time and stays hidden from the room until you pick it.</p>
       <div class="field">
-        <label for="case-file" class="dim">Load a file of cases: a JSON list of {"text", "commitment"}</label>
-        <input class="k-input" id="case-file" type="file" accept="application/json,.json">
-      </div>
-      <div class="field">
-        <label for="case-text" class="dim">Or add one by hand</label>
+        <label for="case-text" class="dim">Add a case</label>
         <textarea class="k-textarea" id="case-text"></textarea>
-        <label for="case-commit" class="dim">The commitment it tests, up to 140 characters</label>
-        <input class="k-input" id="case-commit" type="text" maxlength="140" autocomplete="off">
         <button class="pick k-btn k-btn--primary" id="case-add" type="button">Add this case</button>
       </div>
       <p class="note" id="case-note" role="status" hidden></p>
-    </details>
+    </section>
     <div class="cols">
       <section class="panel" aria-labelledby="incoming-title">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
@@ -194,7 +188,6 @@ function renderIncoming() {
         const used = room.rounds.some((r) => r.prompt_id === p.id) || room.round.prompt_id === p.id;
         return `<li><button type="button" data-prompt="${escapeHtml(p.id)}"${p.id === selected ? ' aria-current="true"' : ""}>
           <span>${escapeHtml(oneLine(p.text))}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
-          <span class="chips">${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
           <span class="chips roles">${chips(p)}</span></button></li>`;
       }).join("")
     : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add some above, or open proposals." : "No cases yet. Paste one above."}</li>`);
@@ -419,7 +412,7 @@ $("pick").addEventListener("click", () => {
 });
 // ------------------------------------------------------ added cases
 $("case-text").maxLength = CASE_MAX;
-document.querySelector('label[for="case-text"]').textContent = `Or add one by hand. Context first, then the question, up to ${CASE_MAX} characters`;
+document.querySelector('label[for="case-text"]').textContent = `Add a case. Context first, then the question, up to ${CASE_MAX} characters`;
 function caseNote(text, tone) {
   const el = $("case-note");
   el.hidden = !text;
@@ -429,13 +422,13 @@ function caseNote(text, tone) {
 
 async function addCase(c) {
   const clean = (v) => (typeof v === "string" ? v.trim() : "");
-  const body = { text: clean(c.text), commitment: clean(c.commitment) };
+  const body = { text: clean(c.text) };
   return demo ? { ok: true, body: {} } : postJson("api/control/cases", body, { "X-Control-Token": token }, 1);
 }
 
-/** Every case in the room, in the order the list shows, in the shape the file loader takes. */
+/** Every case in the room, in the order the list shows, as a list of {text}. */
 function casesJson() {
-  const cases = sortedPrompts().filter((p) => p.text).map((p) => ({ text: p.text, commitment: p.commitment ?? "" }));
+  const cases = sortedPrompts().filter((p) => p.text).map((p) => ({ text: p.text }));
   return JSON.stringify(cases, null, 2);
 }
 
@@ -450,71 +443,24 @@ $("cases-download").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-/** A case the room already holds is skipped, so loading a file twice adds nothing. */
-function hasCase(text) {
-  const same = (s) => String(s ?? "").trim().toLowerCase();
-  return room.prompts.some((p) => same(p.text) === same(text));
-}
-
-const MAX_CASES = 100;
 let loading = false;
 
 function setLoading(on) {
   loading = on;
   $("case-add").disabled = on;
-  $("case-file").disabled = on;
 }
 
 $("case-add").addEventListener("click", async () => {
   if (loading) return;
   setLoading(true);
-  const result = await addCase({ text: $("case-text").value, commitment: $("case-commit").value });
+  const result = await addCase({ text: $("case-text").value });
   setLoading(false);
   if (result.ok) {
     $("case-text").value = "";
-    $("case-commit").value = "";
     caseNote("Added. The four are answering it now.", "ok");
   } else {
     caseNote(result.body.reason ?? result.body.detail ?? `The room refused that (${result.status}).`, "error");
   }
-});
-
-$("case-file").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  if (!file || loading) return;
-  let list;
-  try {
-    const parsed = JSON.parse(await file.text());
-    list = Array.isArray(parsed) ? parsed : parsed.cases;
-    if (!Array.isArray(list) || !list.length) throw new Error("no list");
-  } catch {
-    caseNote('That file is not a JSON list of {"text", "commitment"}.', "error");
-    event.target.value = "";
-    return;
-  }
-  if (list.length > MAX_CASES) {
-    caseNote(`That file has ${list.length} cases. The most this loads at once is ${MAX_CASES}.`, "error");
-    event.target.value = "";
-    return;
-  }
-  setLoading(true);
-  const problems = [];
-  let added = 0;
-  let skipped = 0;
-  for (const [i, c] of list.entries()) {
-    caseNote(`Adding case ${i + 1} of ${list.length}.`, "");
-    if (typeof c?.text !== "string" || !c.text.trim()) { problems.push(`case ${i + 1}: no text`); continue; }
-    if (hasCase(c.text)) { skipped += 1; continue; }
-    const result = await addCase(c);
-    if (result.ok) { added += 1; continue; }
-    // A refused token or a dead connection would fail every case, so it stops here.
-    if ([0, 401, 403].includes(result.status)) { problems.push(result.body.reason ?? "the room did not accept the presenter token"); break; }
-    problems.push(`case ${i + 1}: ${result.body.reason ?? result.body.detail ?? result.status}`);
-  }
-  setLoading(false);
-  const said = `Added ${added} of ${list.length}.${skipped ? ` ${skipped} already there.` : ""}${problems.length ? ` ${problems.join(". ")}.` : ""}`;
-  caseNote(said, problems.length ? "error" : "ok");
-  event.target.value = "";
 });
 
 $("gate").addEventListener("submit", (event) => {

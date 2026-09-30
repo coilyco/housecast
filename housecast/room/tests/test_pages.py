@@ -95,13 +95,13 @@ def test_the_screen_opens_on_the_title_the_lead_and_the_four_agents() -> None:
 
 
 def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:
-    """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
+    """Jev shows with the results to the room, always to the presenter, and never as a grade."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
     assert "word overlap" in views and "Jev did not answer" in views
     assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
-    assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
+    assert '${r.split ? measure(room, r.prompt_id) : ""}' in body
     # The presenter reads it beside the four answers, before picking.
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert 'V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "")' in present
@@ -193,14 +193,14 @@ def test_the_presenter_can_run_a_case_again_or_delete_it_and_pages_hear_a_delete
     assert '"removed"' in room and 'method === "DELETE"' in room
 
 
-def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
+def test_the_presenter_can_download_every_case_as_a_list_of_text() -> None:
     """The keepers have to survive a wipe of the log, so the room's cases leave as a file."""
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert 'id="cases-download"' in present and "function casesJson()" in present
     start = present.index("function casesJson()")
     body = present[start : present.index("\n}\n", start)]
-    assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
-    assert "const MAX_CASES = 100;" in present
+    assert "sortedPrompts()" in body and "({ text: p.text })" in body
+    assert "commitment" not in body
 
 
 def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
@@ -353,3 +353,20 @@ def test_every_persona_reads_as_name_then_role_then_model() -> None:
     body = views[views.index("function who(") : views.index("function subjectById")]
     assert body.index("who__name") < body.index("${role}${model}")
     assert 'class="who__role"' in body and "cast__role" not in views
+
+
+def test_the_add_cases_panel_is_always_open_and_has_no_commitment_or_file_upload() -> None:
+    """Kai removed the commitment field and the JSON upload, and the panel no longer folds."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert '<section class="panel" id="cases-panel"' in present
+    assert "<details" not in present.split('id="cases-panel"', 1)[0].rsplit("<main", 1)[-1]
+    for gone in (
+        'id="case-file"',
+        'id="case-commit"',
+        "MAX_CASES",
+        "The commitment it tests",
+        "tests:",
+    ):
+        assert gone not in present, gone
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "case__tests" not in views and "prompt.commitment" not in views

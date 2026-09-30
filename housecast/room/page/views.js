@@ -94,10 +94,9 @@ function splitPrompt(text) {
 function caseCard(prompt, { withText = true, withContext = withText, presenter = false } = {}) {
   if (!prompt) return "";
   const { question, context } = splitPrompt(prompt.text);
-  const tests = presenter && prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
   const code = withContext && context ? `<pre class="case__code" tabindex="0" aria-label="Prompt context">${escapeHtml(context)}</pre>` : "";
   const text = withText && question ? `<p class="case__text">${escapeHtml(question)}</p>` : "";
-  return `<div class="case">${tests}${code}${text}</div>`;
+  return `<div class="case">${code}${text}</div>`;
 }
 
 /** How many graders gave the majority verdict, said as a count, not a percent. */
@@ -194,8 +193,8 @@ function sheetBody(room, r, { now, controls = null, reasons = false } = {}) {
       return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) + said : ""));
     })
     .join("");
-  // Jev's box shows as soon as a divergence row exists, so grading is not blind to it.
-  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${measure(room, r.prompt_id)}`;
+  // Jev's box reaches attendees and /screen only with results, so no grader is swayed.
+  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${r.split ? measure(room, r.prompt_id) : ""}`;
 }
 
 /** A case as a sheet. `live` marks the one being graded. */
