@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -27,6 +29,21 @@ Checks, in order:
   gated /present    --gated origin answers 302 to a login page, not 200 and not an error
 """
 
+CA_FALLBACK = "/etc/ssl/cert.pem"  # the macOS system bundle
+
+
+def tls_context() -> ssl.SSLContext:
+    """The default trust, plus the system bundle when the default holds no certificate.
+
+    A python.org build on macOS has no CA file until its installer runs, and `uv run` picks
+    it from some directories. Every https GET then fails with CERTIFICATE_VERIFY_FAILED, which
+    reads as a dead room.
+    """
+    context = ssl.create_default_context()
+    if context.cert_store_stats()["x509_ca"] == 0 and os.path.exists(CA_FALLBACK):
+        context.load_verify_locations(cafile=CA_FALLBACK)
+    return context
+
 
 class Reply(NamedTuple):
     status: int
@@ -41,7 +58,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def get(url: str, timeout: float) -> Reply:
     """One GET. A 3xx, 4xx or 5xx comes back as a Reply. A transport error raises."""
-    opener = urllib.request.build_opener(_NoRedirect)
+    opener = urllib.request.build_opener(
+        _NoRedirect, urllib.request.HTTPSHandler(context=tls_context())
+    )
     request = urllib.request.Request(url, method="GET", headers={"Accept": "*/*"})
     try:
         with opener.open(request, timeout=timeout) as reply:
