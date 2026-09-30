@@ -132,7 +132,7 @@ function gradeControls(subject) {
   const mineNow = grades[subject.id] ?? {};
   const pressed = (v) => (mineNow.verdict === v ? "true" : "false");
   const ask = mineNow.verdict === "fail" ? "What broke, in one line? Optional." : "What worked, in one line? Optional.";
-  const goesTo = mineNow.verdict === "fail" ? " It goes in the eval table at the end." : " Only the presenter reads it.";
+  const goesTo = " Others in the room will see this after results.";
   const reason = mineNow.verdict === "fail" || mineNow.verdict === "pass"
     ? `<div class="reason">
         <label for="reason-${escapeHtml(subject.id)}" class="dim">${ask}<span class="hint">${goesTo}</span></label>
