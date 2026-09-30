@@ -289,8 +289,6 @@ p { margin: 0; }
 .screen .chip, .screen .sheet__note { font-size: clamp(0.75rem, 1.9vmin, 1.1rem); }
 .screen .case { padding: 1.2vmin 1.6vmin; }
 .screen .case__text { color: var(--text); font-size: clamp(1.3rem, 3.6vmin, 2.4rem); font-weight: 600; line-height: 1.25; }
-.screen .case__code { max-height: 27vh; font-size: clamp(0.72rem, 1.7vmin, 1rem); }
-.screen .sheets[data-phase="split"] .case__code { max-height: 20vh; }
 .screen .sheet .answer { padding: 1.2vmin 1.4vmin; }
 .screen .tally__share { font-size: clamp(1.4rem, 4vmin, 2.6rem); }
 .screen .tally__counts { font-size: clamp(0.8rem, 1.8vmin, 1.1rem); }
@@ -381,3 +379,4 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
 .screen .case__text { font-size: clamp(1.1rem, 2.8vmin, 1.8rem); }
 .screen .sheet .answer { padding: 1vmin 1.2vmin; }
 .screen #sheet-old:empty { display: none; }
+.screen .case__code { max-height: 26vh; overflow: hidden; font-size: 13px; }

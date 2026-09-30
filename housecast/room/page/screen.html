@@ -101,8 +101,14 @@ function only(...ids) {
 /** The newest case on top, earlier ones folded below and drawn only while open. */
 const openCases = new Set();
 
-/** Sizes every answer to one common type size, the largest at which the longest one fits. */
+/** Fits the case context, then sizes every answer to the largest common size that fits. */
 function fitAnswers() {
+  const code = document.querySelector("#sheet-top .case__code");
+  if (code) {
+    let px = 13;
+    code.style.fontSize = `${px}px`;
+    while (px > 8 && code.scrollHeight > code.clientHeight + 1) code.style.fontSize = `${(px -= 1)}px`;
+  }
   const els = [...document.querySelectorAll("#sheet-top .answer__text")];
   if (!els.length) return;
   const fits = (px) => els.every((el) => { el.style.fontSize = `${px}px`; return el.scrollHeight <= el.clientHeight + 1; });
