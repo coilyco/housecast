@@ -191,9 +191,9 @@ p { margin: 0; }
 /* The closing table is fitted to the window, so nothing is cut off the recording. */
 .screen #main[data-phase="closing"] { height: 100dvh; overflow: hidden; }
 /* A machine reading, boxed and dashed so it never sits among the graded bars. */
-.measure { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.1rem 1rem; padding: 0.35rem 1rem; border: 1px dashed var(--dim); border-radius: 10px; text-align: center; }
+.measure { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.2rem 1.2rem; padding: 0.6rem 1.2rem; border: 2px solid var(--k-brand); border-radius: var(--k-r-1); background: var(--k-surface); text-align: center; }
 .measure__tag { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
-.measure__line { font-family: var(--mono); font-size: clamp(1rem, 2.6vmin, 1.5rem); color: var(--focus); }
+.measure__line { font-family: var(--mono); font-size: clamp(1.25rem, 3vmin, 1.9rem); font-weight: 700; color: var(--text); }
 .measure__note { flex-basis: 100%; font-size: 1rem; color: var(--dim); }
 @media (max-width: 480px) { .split { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 0.5rem; } .split__share { font-size: 1.5rem; } }
 
@@ -274,11 +274,7 @@ p { margin: 0; }
 .sheet .answer__text { max-height: 12rem; overflow: auto; margin-bottom: 0.3rem; font-size: 1.3rem; line-height: 1.35; color: var(--text); }
 .sheet .answer .verdicts { margin-top: auto; }
 .sheet .answer__text:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.tally { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.15rem 0.6rem; }
-.tally__share { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--c); }
-.tally__bar { height: 0.4rem; border-radius: 999px; background: var(--line); overflow: hidden; }
-.tally__bar i { display: block; height: 100%; background: var(--c); }
-.tally__counts { grid-column: 1 / -1; font-size: 1rem; color: var(--dim); }
+.tally__share { color: var(--c); }
 .sheet .answer .tally { margin-top: auto; }
 .sheet--old { padding: 0; border-top-width: 1px; }
 .sheet--old > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; min-height: 2.75rem; padding: 0.7rem 1rem; cursor: pointer; }
@@ -319,3 +315,15 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
 .sheet .answer__head .who__name { white-space: nowrap; align-self: end; }
 .sheet .answer__head .answer__state { align-self: start; }
 .sheet .answer .verdicts { min-height: 3.4rem; }
+
+/* On a phone the page, the case sheet and the card each padded their own edge, so the
+   answer got two thirds of the screen. The cards now run close to the glass. */
+@media (max-width: 480px) {
+  .attendee .wrap { padding: 0.5rem 0.25rem; gap: 0.75rem; }
+  .attendee .masthead { padding-inline: 0.5rem; }
+  .sheet { padding: 0.5rem; gap: 0.6rem; border-radius: var(--k-r-1); }
+  .sheet .case { padding: 0.6rem 0.75rem; }
+  .sheet .answer { padding: 0.75rem 0.75rem 0.85rem; }
+  .sheet--old > summary { padding: 0.7rem 0.6rem; }
+  .measure { padding: 0.5rem 0.75rem; }
+}

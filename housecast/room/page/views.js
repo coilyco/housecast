@@ -149,10 +149,10 @@ function measure(room, promptId) {
 /** A card's share of the room, once the results are open. */
 function tallyHtml(cell) {
   const pct = cell.share === null ? null : Math.round(cell.share * 100);
-  return `<div class="tally" role="group" aria-label="Room tally">
-    <span class="tally__share">${pct === null ? "–" : `${pct}%`}</span>
-    <span class="tally__bar" aria-hidden="true"><i style="width:${pct ?? 0}%"></i></span>
-    <span class="tally__counts">${cell.pass} pass / ${cell.fail} fail</span>
+  return `<div class="tally k-tally" role="group" aria-label="Room tally">
+    <span class="tally__share k-tally__value">${pct === null ? "–" : `${pct}%`}</span>
+    <span class="k-progress" aria-hidden="true"><span class="k-progress__bar" style="width:${pct ?? 0}%;background:var(--c)"></span></span>
+    <span class="tally__counts k-tally__counts">${cell.pass} pass / ${cell.fail} fail</span>
   </div>`;
 }
 

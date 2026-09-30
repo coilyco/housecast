@@ -9,10 +9,7 @@
 <link rel="stylesheet" href="coilyco-kit.css">
 <link rel="stylesheet" href="room.css">
 <style>
-  .bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 0.8rem 1.25rem; background: #241a1d; border-bottom: 2px solid var(--presenter); }
-  .bar .next { min-height: 2.8rem; padding: 0 1.2rem; border: 0; border-radius: 10px; background: var(--presenter); color: #241a1d; font-weight: 700; letter-spacing: 0.04em; }
-  .bar .next:disabled { opacity: 0.55; cursor: not-allowed; }
-  .bar select { min-height: 2.4rem; border-radius: 8px; border: 1px solid var(--line); background: var(--deep); padding: 0 0.5rem; }
+  .bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 0.8rem 1.25rem; background: var(--k-surface); border-bottom: 2px solid var(--k-brand); }
   .bar .status { margin-left: auto; font-size: 0.9rem; }
   .banner { order: -2; }
   #round-panel { order: -1; }
@@ -28,15 +25,9 @@
   .chip { display: inline-flex; gap: 0.3em; align-items: center; }
   .chip .logo { width: 1.5em; height: 1.5em; }
   .sort { display: flex; gap: 0.4rem; }
-  .sort button { min-height: 2.2rem; padding: 0 0.8rem; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--dim); }
-  .sort button[aria-pressed="true"] { color: var(--text); border-color: var(--presenter); }
-  .pick { min-height: 3rem; border: 0; border-radius: 10px; background: var(--presenter); color: #241a1d; font-weight: 700; }
-  .pick:disabled { background: var(--line); color: var(--dim); cursor: not-allowed; }
+  .sort .k-btn[aria-pressed="true"] { border-color: var(--k-brand); color: var(--k-text); }
   .case-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-  .case-controls button { min-height: 2.6rem; padding: 0 1rem; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); }
-  .case-controls button:disabled { opacity: 0.55; cursor: not-allowed; }
   .gate { max-width: 30rem; }
-  .gate input { min-height: 2.8rem; padding: 0 0.8rem; border-radius: 10px; border: 1px solid var(--line); background: var(--deep); }
 </style>
 </head>
 <body class="present">
@@ -46,36 +37,36 @@
   <p class="eyebrow eyebrow--live">presenter</p>
   <h1>Presenter token</h1>
   <p class="dim" id="gate-why">The room prints this token when it starts. It stays in this browser.</p>
-  <label class="field">Token<input id="gate-token" type="password" autocomplete="off" required></label>
-  <button class="pick" type="submit">Open the presenter surface</button>
+  <label class="field">Token<input class="k-input" id="gate-token" type="password" autocomplete="off" required></label>
+  <button class="pick k-btn k-btn--primary" type="submit">Open the presenter surface</button>
 </form>
 
 <div id="surface" hidden>
   <header class="bar">
     <p class="eyebrow eyebrow--live" id="phase-label"></p>
-    <button class="next" id="next" type="button"></button>
-    <button class="next" id="pick-next" type="button" hidden></button>
+    <button class="next k-btn k-btn--primary" id="next" type="button"></button>
+    <button class="next k-btn k-btn--primary" id="pick-next" type="button" hidden></button>
     <label class="dim">Jump to
-      <select id="jump" aria-label="Jump the room to a phase"></select>
+      <select class="k-select" id="jump" aria-label="Jump the room to a phase"></select>
     </label>
-    <button class="next" id="finish" type="button" hidden>Finish: show the eval table</button>
+    <button class="next k-btn k-btn--primary" id="finish" type="button" hidden>Finish: show the eval table</button>
     <p class="status" id="status" role="status"></p>
   </header>
-  <main class="wrap" style="max-width:90rem">
+  <main class="wrap k-dense" style="max-width:90rem">
     <p class="banner" id="banner" role="status" hidden></p>
     <details class="panel" id="cases-panel">
       <summary><h2 style="display:inline">Add prepared cases</h2></summary>
       <p class="dim">A prepared case is answered ahead of time and stays hidden from the room until you pick it.</p>
       <div class="field">
         <label for="case-file" class="dim">Load a file of cases: a JSON list of {"text", "commitment"}</label>
-        <input id="case-file" type="file" accept="application/json,.json">
+        <input class="k-input" id="case-file" type="file" accept="application/json,.json">
       </div>
       <div class="field">
         <label for="case-text" class="dim">Or add one by hand</label>
-        <textarea id="case-text"></textarea>
+        <textarea class="k-textarea" id="case-text"></textarea>
         <label for="case-commit" class="dim">The commitment it tests, up to 140 characters</label>
-        <input id="case-commit" type="text" maxlength="140" autocomplete="off">
-        <button class="pick" id="case-add" type="button">Add this case</button>
+        <input class="k-input" id="case-commit" type="text" maxlength="140" autocomplete="off">
+        <button class="pick k-btn k-btn--primary" id="case-add" type="button">Add this case</button>
       </div>
       <p class="note" id="case-note" role="status" hidden></p>
     </details>
@@ -84,10 +75,10 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
           <h2 id="incoming-title">Cases</h2>
           <div class="sort" role="group" aria-label="Sort prompts">
-            <button type="button" data-sort="divergence" aria-pressed="true">Most split</button>
-            <button type="button" data-sort="newest" aria-pressed="false">Newest</button>
+            <button class="k-btn k-btn--ghost" type="button" data-sort="divergence" aria-pressed="true">Most split</button>
+            <button class="k-btn k-btn--ghost" type="button" data-sort="newest" aria-pressed="false">Newest</button>
           </div>
-          <button type="button" id="cases-download" disabled>Download cases as JSON</button>
+          <button class="k-btn k-btn--ghost" type="button" id="cases-download" disabled>Download cases as JSON</button>
         </div>
         <ul class="incoming" id="incoming"></ul>
       </section>
@@ -97,10 +88,10 @@
         <div id="detail-case"></div>
         <div class="answers" id="detail-answers"></div>
         <div id="detail-jev"></div>
-        <button class="pick" id="pick" type="button" hidden></button>
+        <button class="pick k-btn k-btn--primary" id="pick" type="button" hidden></button>
         <div class="case-controls" id="case-controls" hidden>
-          <button type="button" id="case-run">Run this case again</button>
-          <button type="button" id="case-delete">Delete this case</button>
+          <button class="k-btn k-btn--ghost" type="button" id="case-run">Run this case again</button>
+          <button class="k-btn k-btn--ghost" type="button" id="case-delete">Delete this case</button>
         </div>
       </section>
     </div>
