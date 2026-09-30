@@ -160,3 +160,7 @@ room-watch *ARGS:
 # Check a room's edge before an event, read only. `just room-preflight --public https://room.example --gated https://room.example.dev`.
 room-preflight *ARGS:
     @uv run --no-project python scripts/room_preflight.py "$@"
+
+# Run one full grading round on a throwaway room, with real attendee browsers (writes to its log). `just room-e2e --public URL --direct URL --token-file FILE --writes`.
+room-e2e *ARGS:
+    @uv run --no-project --with playwright==1.57.0 python scripts/room_e2e.py "$@"
