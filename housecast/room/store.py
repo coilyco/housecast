@@ -188,13 +188,16 @@ class Room:
             ],
         }
         if view == "presenter":
-            snap["notes"] = self.notes()
-        if view == "presenter" or self.phase == "closing":
-            failures = self.failures()
+            snap["notes"], snap["failures"] = self.notes(), self.failures()
+        elif view == "attendee":
+            # Reasons open with a round's results, so nobody reads them mid-grading.
+            snap["notes"] = [n for n in self.notes() if self.revealed(n["n"], view)]
+            snap["failures"] = [f for f in self.failures() if self.revealed(f["n"], view)]
+        elif self.phase == "closing":
             # The recorded screen gets who failed, not the words, until Kai rules.
-            if view == "screen":
-                failures = [{k: v for k, v in f.items() if k != "reason"} for f in failures]
-            snap["failures"] = failures
+            snap["failures"] = [
+                {k: v for k, v in f.items() if k != "reason"} for f in self.failures()
+            ]
         return snap
 
     def notes(self) -> list[dict[str, Any]]:
