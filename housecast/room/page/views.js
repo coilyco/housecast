@@ -10,7 +10,8 @@ function who(room, subject) {
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
     : "";
-  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
+  const model = look.model ? `<span class="who__model">${escapeHtml(look.model)}</span>` : "";
+  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${model}</span>`;
 }
 
 function subjectById(room, id) {
@@ -149,30 +150,27 @@ function jevReplied(room, promptId) {
 function measure(room, promptId) {
   const d = room.divergence[promptId];
   if (!d) return "";
-  let line = "Jev is measuring how different the answers are…";
-  let note = "";
+  const replied = jevReplied(room, promptId);
+  const sureText = replied && replied.sure !== null ? ` ${replied.sure}%` : "";
+  const repliedSeg = replied ? `<span class="measure__seg">${replied.replied}/${replied.of} replied${sureText}</span>` : "";
+  let title = "Jev is measuring how different the answers are.";
+  let main = `<span class="measure__seg">measuring</span>`;
   if (d.state === "done") {
     const backup = d.method === "lexical";
     const sure = backup ? null : jevConfidence(d);
-    line = backup
-      ? `How different, by word overlap: ${d.score.toFixed(2)}`
-      : `How different: ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`;
-    note = backup
+    const score = d.score.toFixed(2);
+    title = backup
       ? "Jev did not answer, so this is a simpler count of how many words the answers do not share. 0 means the same words, 1 means none shared. It reads looser than Jev."
-      : "Scale: 0 means the answers take the same stance, 1 means opposite stances.";
+      : `0 means the answers take the same stance, 1 means opposite stances.${sure === null ? "" : ` Jev is ${sure}% sure of this score.`}`;
+    const meter = `<span class="measure__meter" style="--v:${Math.max(0, Math.min(1, d.score))}" aria-hidden="true"><i></i></span>`;
+    main = `<span class="measure__seg">${backup ? `word overlap ${score}` : `${score} apart`}${meter}</span>`;
   } else if (d.state === "failed") {
-    line = "No measurement this round";
-    note = d.reason ? escapeHtml(d.reason) : "";
+    title = d.reason ?? "";
+    main = `<span class="measure__seg">no measurement</span>`;
   }
-  const replied = jevReplied(room, promptId);
-  const repliedLine = replied
-    ? `${replied.replied} of ${replied.of} replied${replied.sure === null ? "" : `, ${replied.sure}% sure`}`
-    : "";
-  return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade">
-    <p class="measure__tag">Jev, machine measurement, not a grade</p>
-    <p class="measure__line">${line}</p>
-    ${note ? `<p class="measure__note">${note}</p>` : ""}
-    ${repliedLine ? `<p class="measure__replied">${repliedLine}</p>` : ""}
+  return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade" title="${escapeHtml(title)}">
+    <span class="measure__tag">Jev <span class="measure__machine">machine</span></span>${main}${repliedSeg}
+    <span class="sr-only">${escapeHtml(title)}</span>
   </aside>`;
 }
 
@@ -187,12 +185,13 @@ function tallyHtml(cell) {
 }
 
 /** One case's body: the prompt, four answer cards side by side, then Jev's box. */
-function sheetBody(room, r, { now, controls = null } = {}) {
+function sheetBody(room, r, { now, controls = null, reasons = false } = {}) {
   const cells = r.split ? splitFor(room, r.n) : null;
   const cards = room.subjects
     .map((s) => {
       const cell = cells?.find((c) => c.subject.id === s.id);
-      return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) : ""));
+      const said = cell && reasons ? reasonsHtml(room, r.n, s.id) : "";
+      return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) + said : ""));
     })
     .join("");
   // Jev's box shows as soon as a divergence row exists, so grading is not blind to it.
@@ -254,6 +253,47 @@ function failures(room, { withReasons = true } = {}) {
     .join("");
 }
 
+/** PASS reasons for the presenter to read aloud, by agent. "" when there are none. */
+function notes(room) {
+  if (!room.notes?.length) return "";
+  const bySubject = new Map();
+  for (const row of room.notes) {
+    if (!bySubject.has(row.subject_id)) bySubject.set(row.subject_id, []);
+    bySubject.get(row.subject_id).push(row);
+  }
+  const rows = [...bySubject.entries()].map(([id, list]) => {
+    const subject = subjectById(room, id);
+    const body = list.map((r) => `<span>${escapeHtml(r.reason)} <span class="dim">(round ${r.n})</span></span>`).join("<br>");
+    return `<li style="--c:${lookOf(room, subject).color}">${who(room, subject)}<span>${body}</span></li>`;
+  });
+  return `<li class="dim">What worked, in the room's words</li>${rows.join("")}`;
+}
+
+// Typed reasons for one agent in one round, both verdicts. The failing ones ride on
+// `failures` and the passing ones on `notes`. Empty unless the view carries them.
+function reasonsFor(room, n, subjectId) {
+  const pick = (list, verdict) =>
+    (list ?? []).filter((x) => x.n === n && x.subject_id === subjectId && x.reason).map((x) => ({ verdict, reason: x.reason }));
+  return [...pick(room.notes, "pass"), ...pick(room.failures, "fail")];
+}
+
+/** What the room said about one agent, under its answer on the results card. */
+function reasonsHtml(room, n, subjectId) {
+  const rows = reasonsFor(room, n, subjectId);
+  if (!rows.length) return "";
+  const li = (r) => `<li data-verdict="${r.verdict}"><span class="reasons__v">${r.verdict === "pass" ? "PASS" : "FAIL"}</span> ${escapeHtml(r.reason)}</li>`;
+  return `<ul class="reasons" aria-label="What the room said">${rows.map(li).join("")}</ul>`;
+}
+
+/** The presenter's results list: every agent's reasons for one round. "" when none. */
+function roundReasons(room, n) {
+  const rows = room.subjects
+    .map((s) => ({ s, html: reasonsHtml(room, n, s.id) }))
+    .filter((x) => x.html)
+    .map(({ s, html }) => `<li style="--c:${lookOf(room, s).color}">${who(room, s)}${html}</li>`);
+  return rows.length ? `<li class="dim">What the room said</li>${rows.join("")}` : "";
+}
+
 /** Sets markup only when it changed, so a once-a-second redraw doesn't re-announce it. */
 function setHtml(el, html) {
   if (el.dataset.html !== html) {
@@ -262,5 +302,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();
