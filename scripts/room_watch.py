@@ -22,14 +22,18 @@ from urllib.parse import urlsplit
 NO_ANSWER = frozenset({"failed", "empty"})
 
 LEGEND = """\
-One line per poll, for example:
-  02:51:33Z rev 32 submissions no round | no-answer: Violet 0, Amber 2 (+1) | slow>60s: 0 | ...
+A header line names each subject's model_label, on the first poll and again whenever one
+changes, so a hot-swap shows. Then one line per poll, for example:
+  02:51:33Z rev 32 submissions no round | no-answer: Violet 0, Amber 2 (+1) | no-reply: ...
 
 no-answer      each subject's failed and empty answers in the room log, and (+n) when
                that grew since the last poll
+no-reply       each subject's settled answers whose jev.replied is false or null. Null is
+               Jev not answering, or a check still in flight, so a count that falls back
+               is normal. Failed and empty answers are in no-answer, not here
 slow           answers running past --slow seconds, one extra line each
 jev-fallback*  rounds scored by word overlap because Jev did not answer, the star the
-               pages show
+               pages show. Those rounds have divergence.confidence null
 
 Also reported: a room that stops answering, a sign-in page in front of it, and a rev or
 prompt count that goes down, which is what a restart onto a fresh log looks like.
@@ -48,12 +52,16 @@ def summarize(snapshot: dict[str, Any], now: float, slow: float) -> dict[str, An
     """Counts a person watching the room would want, from one attendee-view snapshot."""
     round_of = {r["prompt_id"]: r["n"] for r in snapshot.get("rounds", [])}
     subjects = {s["id"]: s.get("label", s["id"]) for s in snapshot.get("subjects", [])}
+    models = {s["id"]: s.get("model_label") for s in snapshot.get("subjects", [])}
     no_answer = dict.fromkeys(subjects, 0)
+    no_reply = dict.fromkeys(subjects, 0)
     slow_answers: list[dict[str, Any]] = []
     for answer in snapshot.get("answers", []):
         subject = answer["subject_id"]
         if answer["state"] in NO_ANSWER:
             no_answer[subject] = no_answer.get(subject, 0) + 1
+        elif answer["state"] == "done" and (answer.get("jev") or {}).get("replied") is not True:
+            no_reply[subject] = no_reply.get(subject, 0) + 1
         elif answer["state"] == "running" and answer.get("started_at"):
             running_for = now - parse_stamp(answer["started_at"])
             if running_for > slow:
@@ -76,7 +84,9 @@ def summarize(snapshot: dict[str, Any], now: float, slow: float) -> dict[str, An
         "round": None if current is None else current.get("n"),
         "prompts": len(snapshot.get("prompts", [])),
         "labels": subjects,
+        "models": models,
         "no_answer": no_answer,
+        "no_reply": no_reply,
         "slow": slow_answers,
         "fallbacks": fallbacks,
     }
@@ -90,18 +100,17 @@ def report(
     now: float, seen: dict[str, Any], before: dict[str, Any] | None, slow: float
 ) -> list[str]:
     """The lines for one poll: a summary, then a line for anything that changed or needs eyes."""
-    labels = seen["labels"]
-    parts = []
-    for subject, total in seen["no_answer"].items():
-        gained = total - before["no_answer"].get(subject, 0) if before else 0
-        parts.append(f"{labels[subject]} {total}" + (f" (+{gained})" if gained > 0 else ""))
     where = f"round {seen['round']}" if seen["round"] is not None else "no round"
-    lines = [
+    lines = []
+    if seen["models"] and (before is None or before["models"] != seen["models"]):
+        lines.append(f"{clock(now)} models: {_models(seen)}")
+    lines.append(
         f"{clock(now)} rev {seen['rev']} {seen['phase']} {where}"
-        f" | no-answer: {', '.join(parts)}"
+        f" | no-answer: {_tally(seen, 'no_answer', before)}"
+        f" | no-reply: {_tally(seen, 'no_reply', before)}"
         f" | slow>{slow:g}s: {len(seen['slow'])}"
         f" | jev-fallback*: {len(seen['fallbacks'])}"
-    ]
+    )
     lines += [
         f"{clock(now)}   slow: {s['subject']} on {s['prompt']} running {s['seconds']}s"
         for s in seen["slow"]
@@ -121,6 +130,22 @@ def report(
             f" prompts {before['prompts']} to {seen['prompts']}: the room may be on a fresh log"
         )
     return lines
+
+
+def _models(seen: dict[str, Any]) -> str:
+    return ", ".join(
+        f"{seen['labels'][subject]} on {model or 'no model_label'}"
+        for subject, model in seen["models"].items()
+    )
+
+
+def _tally(seen: dict[str, Any], key: str, before: dict[str, Any] | None) -> str:
+    """One count per subject, with (+n) when it grew since the last poll."""
+    parts = []
+    for subject, total in seen[key].items():
+        gained = total - before[key].get(subject, 0) if before else 0
+        parts.append(f"{seen['labels'][subject]} {total}" + (f" (+{gained})" if gained > 0 else ""))
+    return ", ".join(parts)
 
 
 def fetch(base: str, timeout: float) -> dict[str, Any]:
