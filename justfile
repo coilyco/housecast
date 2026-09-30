@@ -156,3 +156,7 @@ room-load-test *ARGS:
 # Watch a live room read-only, one GET of /api/room per poll. `just room-watch --base https://room.example`.
 room-watch *ARGS:
     @uv run --no-project python scripts/room_watch.py "$@"
+
+# Check a room's edge before an event, read only. `just room-preflight --public https://room.example --gated https://room.example.dev`.
+room-preflight *ARGS:
+    @uv run --no-project python scripts/room_preflight.py "$@"
