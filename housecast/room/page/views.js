@@ -10,7 +10,8 @@ function who(room, subject) {
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
     : "";
-  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span></span>`;
+  const model = look.model ? `<span class="who__model">${escapeHtml(look.model)}</span>` : "";
+  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${model}</span>`;
 }
 
 function subjectById(room, id) {
@@ -149,30 +150,27 @@ function jevReplied(room, promptId) {
 function measure(room, promptId) {
   const d = room.divergence[promptId];
   if (!d) return "";
-  let line = "Jev is measuring how different the answers are…";
-  let note = "";
+  const replied = jevReplied(room, promptId);
+  const sureText = replied && replied.sure !== null ? ` ${replied.sure}%` : "";
+  const repliedSeg = replied ? `<span class="measure__seg">${replied.replied}/${replied.of} replied${sureText}</span>` : "";
+  let title = "Jev is measuring how different the answers are.";
+  let main = `<span class="measure__seg">measuring</span>`;
   if (d.state === "done") {
     const backup = d.method === "lexical";
     const sure = backup ? null : jevConfidence(d);
-    line = backup
-      ? `How different, by word overlap: ${d.score.toFixed(2)}`
-      : `How different: ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`;
-    note = backup
+    const score = d.score.toFixed(2);
+    title = backup
       ? "Jev did not answer, so this is a simpler count of how many words the answers do not share. 0 means the same words, 1 means none shared. It reads looser than Jev."
-      : "Scale: 0 means the answers take the same stance, 1 means opposite stances.";
+      : `0 means the answers take the same stance, 1 means opposite stances.${sure === null ? "" : ` Jev is ${sure}% sure of this score.`}`;
+    const meter = `<span class="measure__meter" style="--v:${Math.max(0, Math.min(1, d.score))}" aria-hidden="true"><i></i></span>`;
+    main = `<span class="measure__seg">${backup ? `word overlap ${score}` : `${score} apart`}${meter}</span>`;
   } else if (d.state === "failed") {
-    line = "No measurement this round";
-    note = d.reason ? escapeHtml(d.reason) : "";
+    title = d.reason ?? "";
+    main = `<span class="measure__seg">no measurement</span>`;
   }
-  const replied = jevReplied(room, promptId);
-  const repliedLine = replied
-    ? `${replied.replied} of ${replied.of} replied${replied.sure === null ? "" : `, ${replied.sure}% sure`}`
-    : "";
-  return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade">
-    <p class="measure__tag">Jev, machine measurement, not a grade</p>
-    <p class="measure__line">${line}</p>
-    ${note ? `<p class="measure__note">${note}</p>` : ""}
-    ${repliedLine ? `<p class="measure__replied">${repliedLine}</p>` : ""}
+  return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade" title="${escapeHtml(title)}">
+    <span class="measure__tag">Jev <span class="measure__machine">machine</span></span>${main}${repliedSeg}
+    <span class="sr-only">${escapeHtml(title)}</span>
   </aside>`;
 }
 

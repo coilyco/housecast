@@ -103,7 +103,7 @@ def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> Non
     """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
-    assert "by word overlap" in views and "Jev did not answer" in views
+    assert "word overlap" in views and "Jev did not answer" in views
     assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
@@ -230,7 +230,7 @@ def test_jev_says_how_many_replied_in_one_line_and_nothing_until_the_engine_send
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "function jevReplied(" in views and "jev-chip" not in views
     assert 'checks.some((j) => typeof j?.replied !== "boolean")) return null' in views
-    assert "Math.min(...sure)" in views and "of ${replied.of} replied" in views
+    assert "Math.min(...sure)" in views and "${replied.replied}/${replied.of} replied" in views
 
 
 def test_a_card_with_no_answer_offers_no_grade() -> None:
@@ -238,3 +238,19 @@ def test_a_card_with_no_answer_offers_no_grade() -> None:
     html = (PAGE / "index.html").read_text(encoding="utf-8")
     body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
     assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
+
+
+def test_jevs_box_is_one_line_with_a_meter_and_the_explanation_on_hover() -> None:
+    """Kai asked for about 40 characters: the scale is a meter, the words are the title."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function measure(") : views.index("/** A card's share")]
+    assert 'class="measure__meter"' in body and 'title="${escapeHtml(title)}"' in body
+    assert "·" not in body
+
+
+def test_the_cases_list_opens_in_the_order_they_were_added() -> None:
+    """Kai loads anchors first, so oldest-first is the default and Pick next follows it."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'data-sort="order" aria-pressed="true">In order</button>' in present
+    assert 'let sort = "order";' in present
+    assert 'if (sort === "order") return list.sort((a, b) => a.seq - b.seq);' in present
