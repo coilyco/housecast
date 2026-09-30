@@ -10,8 +10,9 @@ function who(room, subject) {
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
     : "";
+  const role = look.role ? `<span class="who__role">${escapeHtml(look.role)}</span>` : "";
   const model = look.model ? `<span class="who__model">${escapeHtml(look.model)}</span>` : "";
-  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${model}</span>`;
+  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${role}${model}</span>`;
 }
 
 function subjectById(room, id) {
@@ -23,7 +24,7 @@ function cast(room, { full = false } = {}) {
   return room.subjects
     .map((s) => {
       const look = lookOf(room, s);
-      const more = full && look.role ? `<span class="cast__role">${escapeHtml(look.role)}</span><span class="cast__line">${escapeHtml(look.line)}</span>` : "";
+      const more = full && look.line ? `<span class="cast__line">${escapeHtml(look.line)}</span>` : "";
       return `<li style="--c:${look.color}">${who(room, s)}${more}</li>`;
     })
     .join("");
@@ -93,11 +94,9 @@ function splitPrompt(text) {
 function caseCard(prompt, { withText = true, withContext = withText, presenter = false } = {}) {
   if (!prompt) return "";
   const { question, context } = splitPrompt(prompt.text);
-  const tests = presenter && prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
   const code = withContext && context ? `<pre class="case__code" tabindex="0" aria-label="Prompt context">${escapeHtml(context)}</pre>` : "";
   const text = withText && question ? `<p class="case__text">${escapeHtml(question)}</p>` : "";
-  const from = !presenter ? "" : prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
-  return `<div class="case">${tests}${code}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
+  return `<div class="case">${code}${text}</div>`;
 }
 
 /** How many graders gave the majority verdict, said as a count, not a percent. */
@@ -194,8 +193,8 @@ function sheetBody(room, r, { now, controls = null, reasons = false } = {}) {
       return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) + said : ""));
     })
     .join("");
-  // Jev's box shows as soon as a divergence row exists, so grading is not blind to it.
-  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${measure(room, r.prompt_id)}`;
+  // Jev's box reaches attendees and /screen only with results, so no grader is swayed.
+  return `${caseCard(promptById(room, r.prompt_id))}<div class="sheet__answers">${cards}</div>${r.split ? measure(room, r.prompt_id) : ""}`;
 }
 
 /** A case as a sheet. `live` marks the one being graded. */
@@ -294,13 +293,23 @@ function roundReasons(room, n) {
   return rows.length ? `<li class="dim">What the room said</li>${rows.join("")}` : "";
 }
 
-/** Sets markup only when it changed, so a once-a-second redraw doesn't re-announce it. */
-function setHtml(el, html) {
-  if (el.dataset.html !== html) {
-    el.dataset.html = html;
-    el.innerHTML = html;
-  }
+/** True while a reader has text selected inside `el`, which a redraw would wipe. */
+function selecting(el) {
+  const sel = window.getSelection?.();
+  return Boolean(sel && sel.rangeCount && !sel.isCollapsed && sel.anchorNode && el.contains(sel.anchorNode));
 }
 
-window.RoomViews = { roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+/** Sets markup if it changed and nobody is selecting in it. A later redraw lands it. */
+function setHtml(el, html) {
+  if (el.dataset.html === html || selecting(el)) return;
+  el.dataset.html = html;
+  el.innerHTML = html;
+}
+
+/** Sets text if it changed, since rewriting the same text still clears a selection. */
+function setText(el, text) {
+  if (el.textContent !== text && !selecting(el)) el.textContent = text;
+}
+
+window.RoomViews = { setText, roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();

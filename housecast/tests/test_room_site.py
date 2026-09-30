@@ -83,6 +83,11 @@ def test_the_split_keeps_the_presenter_off_the_public_site(tmp_path: Path) -> No
     )
     assert "index.html" in public and "screen/index.html" in public and "404.html" in public
     assert not any(name.startswith("present") for name in public)
+    assert "screen/index.html" in sorted(
+        p.relative_to(tmp_path / "gated").as_posix()
+        for p in (tmp_path / "gated").rglob("*")
+        if p.is_file()
+    ), "the closer needs /screen on the presenter host"
     assert "present/index.html" in sorted(
         p.relative_to(tmp_path / "gated").as_posix()
         for p in (tmp_path / "gated").rglob("*")
@@ -102,3 +107,12 @@ def test_split_writes_both_directories(tmp_path: Path) -> None:
     assert _load().main([str(tmp_path / "out"), "--split"]) == 0
     assert (tmp_path / "out" / "public" / "screen" / "index.html").is_file()
     assert (tmp_path / "out" / "gated" / "present" / "index.html").is_file()
+
+
+def test_the_not_found_page_wears_the_same_background(tmp_path: Path) -> None:
+    """Every page the room serves, including a miss, takes the kit's orbits from k-page."""
+    _load().export(tmp_path)
+    assert 'class="k-page"' in (tmp_path / "404.html").read_text(encoding="utf-8")
+    for name in ("index.html", "screen/index.html", "present/index.html"):
+        html = (tmp_path / name).read_text(encoding="utf-8")
+        assert " k-page" in html.split("<body", 1)[1].split(">", 1)[0], name

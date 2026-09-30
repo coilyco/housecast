@@ -20,17 +20,18 @@
   .incoming button[aria-current="true"] { border-color: var(--presenter); box-shadow: inset 4px 0 0 var(--presenter); }
   .incoming .score { font-family: var(--mono); font-weight: 700; }
   .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; font-size: 0.85rem; color: var(--dim); }
-  .src { padding: 0 0.5em; border-radius: 999px; border: 1px solid var(--line); font-size: 0.8rem; }
-  .src[data-src="prepared"] { border-color: var(--closing); color: var(--closing); }
   .chip { display: inline-flex; gap: 0.3em; align-items: center; }
   .chip .logo { width: 1.5em; height: 1.5em; }
+  .roles { flex-direction: column; flex-wrap: nowrap; gap: 0.15rem; }
+  .roles .chip { display: flex; justify-content: space-between; padding: 0.1rem 0; border: 0; border-radius: 0; color: var(--text); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .roles .chip__state { color: var(--dim); }
   .sort { display: flex; gap: 0.4rem; }
   .sort .k-btn[aria-pressed="true"] { border-color: var(--k-brand); color: var(--k-text); }
   .case-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; }
   .gate { max-width: 30rem; }
 </style>
 </head>
-<body class="present">
+<body class="present k-page">
 <p class="demo-chip" id="demo-chip" hidden>demo data</p>
 
 <form class="wrap gate" id="gate" hidden>
@@ -47,26 +48,22 @@
     <button class="next k-btn k-btn--primary" id="next" type="button"></button>
     <button class="next k-btn k-btn--primary" id="pick-next" type="button" hidden></button>
     <button class="next k-btn k-btn--primary" id="finish" type="button" hidden>Finish: show the eval table</button>
+    <button class="k-btn k-btn--ghost" id="reasons-toggle" type="button"></button>
+    <p class="dim" id="reasons-state" role="status"></p>
     <p class="status" id="status" role="status"></p>
   </header>
   <main class="wrap k-dense" style="max-width:90rem">
     <p class="banner" id="banner" role="status" hidden></p>
-    <details class="panel" id="cases-panel">
-      <summary><h2 style="display:inline">Add prepared cases</h2></summary>
-      <p class="dim">A prepared case is answered ahead of time and stays hidden from the room until you pick it.</p>
+    <section class="panel" id="cases-panel" aria-labelledby="add-title">
+      <h2 id="add-title">Add cases</h2>
+      <p class="dim">A case is answered ahead of time and stays hidden from the room until you pick it.</p>
       <div class="field">
-        <label for="case-file" class="dim">Load a file of cases: a JSON list of {"text", "commitment"}</label>
-        <input class="k-input" id="case-file" type="file" accept="application/json,.json">
-      </div>
-      <div class="field">
-        <label for="case-text" class="dim">Or add one by hand</label>
+        <label for="case-text" class="dim">Add a case</label>
         <textarea class="k-textarea" id="case-text"></textarea>
-        <label for="case-commit" class="dim">The commitment it tests, up to 140 characters</label>
-        <input class="k-input" id="case-commit" type="text" maxlength="140" autocomplete="off">
         <button class="pick k-btn k-btn--primary" id="case-add" type="button">Add this case</button>
       </div>
       <p class="note" id="case-note" role="status" hidden></p>
-    </details>
+    </section>
     <div class="cols">
       <section class="panel" aria-labelledby="incoming-title">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
@@ -148,12 +145,13 @@ async function control(path, body, method = "POST") {
     if (method === "DELETE") room.prompts = room.prompts.filter((p) => p.id !== path.split("/")[1]);
     if (path === "phase") room.phase = body.phase;
     if (path === "pick") { room.round = { n: room.round.n + 1, prompt_id: body.prompt_id, graded: 0 }; room.phase = "grading"; }
+    if (path === "reasons") room.reasonsVisible = body.visible;
     render();
     return true;
   }
-  $("status").textContent = "Sending.";
+  V.setText($("status"), "Sending.");
   const result = await postJson(`api/control/${path}`, body, { "X-Control-Token": token }, path === "pick" ? 1 : 2, method);
-  $("status").textContent = result.ok ? "" : result.body.reason ?? result.body.detail ?? `Refused (${result.status}).`;
+  V.setText($("status"), result.ok ? "" : result.body.reason ?? result.body.detail ?? `Refused (${result.status}).`);
   return result.ok;
 }
 
@@ -170,7 +168,7 @@ function chips(prompt) {
     .map((s) => {
       const answer = answerFor(room, prompt.id, s.id);
       const word = { queued: "waiting", running: "thinking", done: "done", empty: "no answer", failed: "no answer" }[answer.state] ?? answer.state;
-      return `<span class="chip">${V.who(room, s)} ${word}</span>`;
+      return `<span class="chip">${V.who(room, s)}<span class="chip__state">${word}</span></span>`;
     })
     .join("");
 }
@@ -190,10 +188,9 @@ function renderIncoming() {
         const used = room.rounds.some((r) => r.prompt_id === p.id) || room.round.prompt_id === p.id;
         return `<li><button type="button" data-prompt="${escapeHtml(p.id)}"${p.id === selected ? ' aria-current="true"' : ""}>
           <span>${escapeHtml(oneLine(p.text))}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
-          <span class="chips"><span class="src" data-src="${escapeHtml(p.source ?? "attendee")}">${p.source === "prepared" ? "prepared" : "from the room"}</span>${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
-          <span class="chips">${chips(p)}</span></button></li>`;
+          <span class="chips roles">${chips(p)}</span></button></li>`;
       }).join("")
-    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add prepared ones above, or open proposals." : "No cases yet. Paste one above."}</li>`);
+    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add some above, or open proposals." : "No cases yet. Paste one above."}</li>`);
 }
 
 /** The next case not yet picked, in the order the list shows, so stepping through is one click. */
@@ -228,10 +225,10 @@ function pickInfo(now) {
 
 function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
-  $("detail-title").textContent = prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers";
+  V.setText($("detail-title"), prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers");
   const d = prompt && room.divergence[prompt.id];
   const sure = d?.method === "lexical" ? null : V.jevConfidence(d);
-  $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? (d.method === "lexical" ? `, word overlap ${d.score.toFixed(2)} (Jev did not answer)` : `, answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`) : ""}` : "";
+  V.setText($("detail-meta"), prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? (d.method === "lexical" ? `, word overlap ${d.score.toFixed(2)} (Jev did not answer)` : `, answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`) : ""}` : "");
   V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "");
@@ -243,7 +240,7 @@ function renderDetail(now) {
   $("pick").hidden = !pick;
   if (pick) {
     $("pick").disabled = pick.disabled;
-    $("pick").textContent = pick.label;
+    V.setText($("pick"), pick.label);
   }
 }
 
@@ -254,17 +251,17 @@ function renderRound() {
   V.setHtml($("round-eval"), "");
   V.setHtml($("round-failures"), "");
   if (room.phase === "grading") {
-    $("round-title").textContent = `Case ${room.round.n}: grading`;
-    $("round-meta").textContent = `${room.round.graded ?? 0} graded so far. The room sees a count, never a direction.`;
+    V.setText($("round-title"), `Case ${room.round.n}: grading`);
+    V.setText($("round-meta"), `${room.round.graded ?? 0} graded so far. The room sees a count, never a direction.`);
   } else if (room.phase === "split") {
     const last = room.rounds[room.rounds.length - 1];
-    $("round-title").textContent = `Case ${last?.n ?? room.round.n}: results`;
-    $("round-meta").textContent = promptById(room, last?.prompt_id)?.text ?? "";
+    V.setText($("round-title"), `Case ${last?.n ?? room.round.n}: results`);
+    V.setText($("round-meta"), promptById(room, last?.prompt_id)?.text ?? "");
     V.setHtml($("round-split"), (last && V.split(room, last.n, { tall: 10 })) ?? "");
     V.setHtml($("round-failures"), last ? V.roundReasons(room, last.n) : "");
   } else if (room.phase === "closing") {
-    $("round-title").textContent = "The eval, with the reasons";
-    $("round-meta").textContent = "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.";
+    V.setText($("round-title"), "The eval, with the reasons");
+    V.setText($("round-meta"), "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.");
     V.setHtml($("round-eval"), V.evalTable(room));
     V.setHtml($("round-failures"), V.failures(room) + V.notes(room));
   }
@@ -309,12 +306,12 @@ function render() {
   }
   // Attendees read the round being opened, so submissions names the next one.
   const shown = room.phase === "submissions" ? room.round.n + 1 : room.round.n;
-  $("phase-label").textContent = shown ? `Case ${shown}` : "No case yet";
+  V.setText($("phase-label"), shown ? `Case ${shown}` : "No case yet");
   const pick = pickInfo(now);
   const next = NEXT[room.phase];
   // In closing the primary raises the closer, since going back to holding resets the room.
   const raisesCloser = room.phase === "closing" && Boolean(screenChannel);
-  $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label;
+  V.setText($("next"), pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label);
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
   $("cases-download").disabled = !room.prompts.length;
@@ -323,8 +320,11 @@ function render() {
   const answering = upNext && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, upNext.id, s.id).state));
   $("pick-next").hidden = !["holding", "submissions", "split"].includes(room.phase) || !upNext;
   $("pick-next").disabled = Boolean(answering);
-  $("pick-next").textContent = answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`;
+  V.setText($("pick-next"), answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`);
   $("pick-next").title = upNext ? oneLine(upNext.text) : "";
+  const hidden = room.reasonsVisible === false;
+  V.setText($("reasons-toggle"), hidden ? "Show comments to attendees" : "Hide comments from attendees");
+  V.setText($("reasons-state"), hidden ? "Comments are hidden from attendees." : "Attendees can read comments.");
   if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
@@ -339,10 +339,10 @@ function renderLink() {
     $("surface").hidden = true;
     $("gate").hidden = false;
     refused = true;
-    $("gate-why").textContent = "The room refused that token. Paste the one it printed when it started.";
+    V.setText($("gate-why"), "The room refused that token. Paste the one it printed when it started.");
     try { localStorage.removeItem("room-token"); } catch {}
   } else if (!link.live) {
-    $("banner").textContent = `Reconnecting. This is from ${seconds(new Date(link.since).toISOString(), Date.now())}s ago.`;
+    V.setText($("banner"), `Reconnecting. This is from ${seconds(new Date(link.since).toISOString(), Date.now())}s ago.`);
   }
 }
 
@@ -390,6 +390,13 @@ $("pick-next").addEventListener("click", () => {
   void control("pick", { prompt_id: upNext.id });
 });
 $("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
+$("reasons-toggle").addEventListener("click", async () => {
+  const visible = room.reasonsVisible === false;
+  if (await control("reasons", { visible })) {
+    room.reasonsVisible = visible;
+    render();
+  }
+});
 $("case-run").addEventListener("click", () => {
   if (selected) void control(`cases/${selected}/run`, {});
 });
@@ -403,9 +410,9 @@ $("case-delete").addEventListener("click", async () => {
 $("pick").addEventListener("click", () => {
   if (selected) void control("pick", { prompt_id: selected });
 });
-// ------------------------------------------------------ prepared cases
+// ------------------------------------------------------ added cases
 $("case-text").maxLength = CASE_MAX;
-document.querySelector('label[for="case-text"]').textContent = `Or add one by hand. Context first, then the question, up to ${CASE_MAX} characters`;
+document.querySelector('label[for="case-text"]').textContent = `Add a case. Context first, then the question, up to ${CASE_MAX} characters`;
 function caseNote(text, tone) {
   const el = $("case-note");
   el.hidden = !text;
@@ -415,13 +422,13 @@ function caseNote(text, tone) {
 
 async function addCase(c) {
   const clean = (v) => (typeof v === "string" ? v.trim() : "");
-  const body = { text: clean(c.text), commitment: clean(c.commitment) };
+  const body = { text: clean(c.text) };
   return demo ? { ok: true, body: {} } : postJson("api/control/cases", body, { "X-Control-Token": token }, 1);
 }
 
-/** Every case in the room, in the order the list shows, in the shape the file loader takes. */
+/** Every case in the room, in the order the list shows, as a list of {text}. */
 function casesJson() {
-  const cases = sortedPrompts().filter((p) => p.text).map((p) => ({ text: p.text, commitment: p.commitment ?? "" }));
+  const cases = sortedPrompts().filter((p) => p.text).map((p) => ({ text: p.text }));
   return JSON.stringify(cases, null, 2);
 }
 
@@ -436,71 +443,24 @@ $("cases-download").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 });
 
-/** A case the room already holds is skipped, so loading a file twice adds nothing. */
-function hasCase(text) {
-  const same = (s) => String(s ?? "").trim().toLowerCase();
-  return room.prompts.some((p) => same(p.text) === same(text));
-}
-
-const MAX_CASES = 100;
 let loading = false;
 
 function setLoading(on) {
   loading = on;
   $("case-add").disabled = on;
-  $("case-file").disabled = on;
 }
 
 $("case-add").addEventListener("click", async () => {
   if (loading) return;
   setLoading(true);
-  const result = await addCase({ text: $("case-text").value, commitment: $("case-commit").value });
+  const result = await addCase({ text: $("case-text").value });
   setLoading(false);
   if (result.ok) {
     $("case-text").value = "";
-    $("case-commit").value = "";
     caseNote("Added. The four are answering it now.", "ok");
   } else {
     caseNote(result.body.reason ?? result.body.detail ?? `The room refused that (${result.status}).`, "error");
   }
-});
-
-$("case-file").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  if (!file || loading) return;
-  let list;
-  try {
-    const parsed = JSON.parse(await file.text());
-    list = Array.isArray(parsed) ? parsed : parsed.cases;
-    if (!Array.isArray(list) || !list.length) throw new Error("no list");
-  } catch {
-    caseNote('That file is not a JSON list of {"text", "commitment"}.', "error");
-    event.target.value = "";
-    return;
-  }
-  if (list.length > MAX_CASES) {
-    caseNote(`That file has ${list.length} cases. The most this loads at once is ${MAX_CASES}.`, "error");
-    event.target.value = "";
-    return;
-  }
-  setLoading(true);
-  const problems = [];
-  let added = 0;
-  let skipped = 0;
-  for (const [i, c] of list.entries()) {
-    caseNote(`Adding case ${i + 1} of ${list.length}.`, "");
-    if (typeof c?.text !== "string" || !c.text.trim()) { problems.push(`case ${i + 1}: no text`); continue; }
-    if (hasCase(c.text)) { skipped += 1; continue; }
-    const result = await addCase(c);
-    if (result.ok) { added += 1; continue; }
-    // A refused token or a dead connection would fail every case, so it stops here.
-    if ([0, 401, 403].includes(result.status)) { problems.push(result.body.reason ?? "the room did not accept the presenter token"); break; }
-    problems.push(`case ${i + 1}: ${result.body.reason ?? result.body.detail ?? result.status}`);
-  }
-  setLoading(false);
-  const said = `Added ${added} of ${list.length}.${skipped ? ` ${skipped} already there.` : ""}${problems.length ? ` ${problems.join(". ")}.` : ""}`;
-  caseNote(said, problems.length ? "error" : "ok");
-  event.target.value = "";
 });
 
 $("gate").addEventListener("submit", (event) => {

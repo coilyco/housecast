@@ -86,27 +86,22 @@ def test_a_slow_answer_is_never_called_slow_or_usual() -> None:
         assert "slower than usual" not in text and "Usually about" not in text, name
 
 
-# Kai's cover line, character for character: her 06:15 self-check compares it.
-OPENING_LINE = (
-    "I've setup an array of 4 agents with separate composed personas and model backends. "
-    "We're going to be curating eval cases with the specific purpose of finding divergence "
-    "and digging into what source text is causing it."
-)
-
-
-def test_the_screen_opens_on_kais_cover_line() -> None:
+def test_the_screen_opens_on_the_title_the_lead_and_the_four_agents() -> None:
+    """Kai cut the long paragraph under the lead because it was too hard to read."""
     html = (PAGE / "screen.html").read_text(encoding="utf-8")
-    assert f'<p class="dim">{OPENING_LINE}</p>' in html
+    assert "Behavioral Divergence Evals" in html and 'class="opening__lead"' in html
+    assert 'id="opening-cast"' in html and 'id="opening-join"' in html
+    assert "I've setup an array" not in html
 
 
 def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> None:
-    """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
+    """Jev shows with the results to the room, always to the presenter, and never as a grade."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
     assert "word overlap" in views and "Jev did not answer" in views
     assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
-    assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
+    assert '${r.split ? measure(room, r.prompt_id) : ""}' in body
     # The presenter reads it beside the four answers, before picking.
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert 'V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "")' in present
@@ -198,14 +193,14 @@ def test_the_presenter_can_run_a_case_again_or_delete_it_and_pages_hear_a_delete
     assert '"removed"' in room and 'method === "DELETE"' in room
 
 
-def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
+def test_the_presenter_can_download_every_case_as_a_list_of_text() -> None:
     """The keepers have to survive a wipe of the log, so the room's cases leave as a file."""
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert 'id="cases-download"' in present and "function casesJson()" in present
     start = present.index("function casesJson()")
     body = present[start : present.index("\n}\n", start)]
-    assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
-    assert "const MAX_CASES = 100;" in present
+    assert "sortedPrompts()" in body and "({ text: p.text })" in body
+    assert "commitment" not in body
 
 
 def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
@@ -238,6 +233,22 @@ def test_a_card_with_no_answer_offers_no_grade() -> None:
     html = (PAGE / "index.html").read_text(encoding="utf-8")
     body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
     assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
+
+
+def test_both_verdicts_take_a_reason_and_both_are_posted() -> None:
+    """Kai wants a one-line reason on PASS as well as FAIL, and the engine must keep it."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
+    assert 'mineNow.verdict === "fail" || mineNow.verdict === "pass"' in body
+    assert "if (each.reason) reasons[id] = each.reason;" in html
+    assert 'each.verdict === "fail" && each.reason' not in html
+
+
+def test_the_reason_hint_says_others_will_see_it_after_results() -> None:
+    """Attendees read each other's reasons once results open, so the hint must not say otherwise."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert "Others in the room will see this after results." in html
+    assert "Only the presenter reads it." not in html and "eval table at the end" not in html
 
 
 def test_jevs_box_is_one_line_with_a_meter_and_the_explanation_on_hover() -> None:
@@ -289,3 +300,84 @@ def test_typed_reasons_show_on_the_attendee_results_and_the_presenter_never_on_t
     assert "reasons: true" not in screen and "roundReasons" not in screen
     present = (PAGE / "present.html").read_text(encoding="utf-8")
     assert "V.roundReasons(room, last.n)" in present
+
+
+def test_each_role_in_the_cases_list_is_its_own_line_with_its_status() -> None:
+    """Kai chose one role per line, the name on the left and whether it replied on the right."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert '<span class="chips roles">${chips(p)}</span>' in present
+    assert '<span class="chip__state">${word}</span>' in present
+    assert ".roles { flex-direction: column;" in present
+
+
+def test_the_presenter_can_hide_comments_from_attendees_and_sees_the_state() -> None:
+    """One switch posts {visible} to the engine and says which way it is set."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'control("reasons", { visible })' in present
+    assert "Hide comments from attendees" in present and "Show comments to attendees" in present
+    assert "Attendees can read comments." in present
+    room = (PAGE / "room.js").read_text(encoding="utf-8")
+    assert "reasonsVisible: snapshot.reasons_visible ?? true," in room
+
+
+def test_every_page_wears_the_kits_orbits_background() -> None:
+    """The kit's page texture, the five discs top right, comes from k-page on the body."""
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'k-page">' in html.split("<body", 1)[1].split(">", 1)[0] + ">", name
+
+
+def test_the_phone_role_rows_are_not_pills_so_a_wrapped_model_is_not_clipped() -> None:
+    """At 320px the model wraps under the name, and a full pill radius cut its first letters."""
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    phone = css[css.rindex("A role row is three lines") :]
+    assert (
+        ".cast--row { flex-direction: column;" in phone
+        and ".cast--row li { border-radius: var(--k-r-2);" in phone
+    )
+    assert ".cast--row .logo { grid-row: 1 / span 3; }" in phone
+
+
+def test_a_case_is_just_a_case_with_no_prepared_or_from_the_room_label() -> None:
+    """Attendee proposals are off, so every case is added by the presenter. The word is noise."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "Add cases" in present and "Add prepared cases" not in present
+    assert 'class="src"' not in present and ">from the room</span>" not in present
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "Prepared case" not in views and "Proposed by someone in the room" not in views
+
+
+def test_every_persona_reads_as_name_then_role_then_model() -> None:
+    """Kai: wherever a persona is listed it is the creature name, its role, and its model."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function who(") : views.index("function subjectById")]
+    assert body.index("who__name") < body.index("${role}${model}")
+    assert 'class="who__role"' in body and "cast__role" not in views
+
+
+def test_the_add_cases_panel_is_always_open_and_has_no_commitment_or_file_upload() -> None:
+    """Kai removed the commitment field and the JSON upload, and the panel no longer folds."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert '<section class="panel" id="cases-panel"' in present
+    assert "<details" not in present.split('id="cases-panel"', 1)[0].rsplit("<main", 1)[-1]
+    for gone in (
+        'id="case-file"',
+        'id="case-commit"',
+        "MAX_CASES",
+        "The commitment it tests",
+        "tests:",
+    ):
+        assert gone not in present, gone
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "case__tests" not in views and "prompt.commitment" not in views
+
+
+def test_a_redraw_never_clears_text_a_reader_has_selected() -> None:
+    """Pages redraw every second, so a selection inside a block holds that block's redraw."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function selecting(") : views.index("window.RoomViews")]
+    assert "!sel.isCollapsed" in body and "selecting(el)" in body
+    assert "if (el.textContent !== text && !selecting(el)) el.textContent = text;" in body
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'V.setText($("' in html, name
