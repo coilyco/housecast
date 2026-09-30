@@ -178,7 +178,7 @@ function render() {
   const waiting = phase === "holding";
   const [top, ...older] = waiting ? [] : casesNow();
   $("holding").hidden = !waiting;
-  $("holding-join").textContent = location.host;
+  V.setText($("holding-join"), location.host);
   $("masthead").hidden = waiting;
   V.setHtml($("head-cast"), V.cast(room));
   $("submissions").hidden = $("mine").hidden = phase !== "submissions";

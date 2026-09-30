@@ -293,13 +293,23 @@ function roundReasons(room, n) {
   return rows.length ? `<li class="dim">What the room said</li>${rows.join("")}` : "";
 }
 
-/** Sets markup only when it changed, so a once-a-second redraw doesn't re-announce it. */
-function setHtml(el, html) {
-  if (el.dataset.html !== html) {
-    el.dataset.html = html;
-    el.innerHTML = html;
-  }
+/** True while a reader has text selected inside `el`, which a redraw would wipe. */
+function selecting(el) {
+  const sel = window.getSelection?.();
+  return Boolean(sel && sel.rangeCount && !sel.isCollapsed && sel.anchorNode && el.contains(sel.anchorNode));
 }
 
-window.RoomViews = { roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+/** Sets markup if it changed and nobody is selecting in it. A later redraw lands it. */
+function setHtml(el, html) {
+  if (el.dataset.html === html || selecting(el)) return;
+  el.dataset.html = html;
+  el.innerHTML = html;
+}
+
+/** Sets text if it changed, since rewriting the same text still clears a selection. */
+function setText(el, text) {
+  if (el.textContent !== text && !selecting(el)) el.textContent = text;
+}
+
+window.RoomViews = { setText, roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();

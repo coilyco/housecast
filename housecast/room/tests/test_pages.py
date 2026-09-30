@@ -370,3 +370,14 @@ def test_the_add_cases_panel_is_always_open_and_has_no_commitment_or_file_upload
         assert gone not in present, gone
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "case__tests" not in views and "prompt.commitment" not in views
+
+
+def test_a_redraw_never_clears_text_a_reader_has_selected() -> None:
+    """Pages redraw every second, so a selection inside a block holds that block's redraw."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function selecting(") : views.index("window.RoomViews")]
+    assert "!sel.isCollapsed" in body and "selecting(el)" in body
+    assert "if (el.textContent !== text && !selecting(el)) el.textContent = text;" in body
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'V.setText($("' in html, name

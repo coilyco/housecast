@@ -141,7 +141,7 @@ function render() {
   if (sheets) return renderSheets(now);
   if (opening) {
     V.setHtml($("opening-cast"), V.cast(room, { full: true }));
-    $("opening-join").textContent = host;
+    V.setText($("opening-join"), host);
     return;
   }
   $("main").dataset.phase = room.phase;
@@ -151,24 +151,24 @@ function render() {
     // With proposals hidden, this phase is the join address and nothing else.
     eyebrow.textContent = SHOW_PROPOSALS ? "proposals open" : "the room";
     if (SHOW_PROPOSALS) eyebrow.classList.add("eyebrow--open");
-    $("title").textContent = SHOW_PROPOSALS ? "Propose a test case" : "Waiting on the presenter";
+    V.setText($("title"), SHOW_PROPOSALS ? "Propose a test case" : "Waiting on the presenter");
     $("title").dataset.len = "";
     // Prepared cases are not proposals, and no proposal's text reaches the recording until Kai picks it.
     const proposed = room.prompts.filter((p) => p.source !== "prepared").length;
-    $("lead").textContent = SHOW_PROPOSALS ? `${proposed} proposed so far. Proposals stay on your screen until Kai promotes one.` : "";
-    $("join").textContent = host;
-    $("foot").textContent = "";
+    V.setText($("lead"), SHOW_PROPOSALS ? `${proposed} proposed so far. Proposals stay on your screen until Kai promotes one.` : "");
+    V.setText($("join"), host);
+    V.setText($("foot"), "");
     only("join");
   } else if (room.phase === "closing") {
     eyebrow.textContent = "the eval, this session";
     eyebrow.classList.add("eyebrow--closing");
-    $("title").textContent = "Now change the compositions";
+    V.setText($("title"), "Now change the compositions");
     $("title").dataset.len = "";
-    $("lead").textContent = "";
+    V.setText($("lead"), "");
     // The reasons are attendee-typed, so the recording shows the table and Kai reads them aloud.
     V.setHtml($("eval"), V.evalTable(room));
     fitEval();
-    $("foot").textContent = "";
+    V.setText($("foot"), "");
     only("eval");
   }
 }

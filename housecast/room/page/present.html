@@ -149,9 +149,9 @@ async function control(path, body, method = "POST") {
     render();
     return true;
   }
-  $("status").textContent = "Sending.";
+  V.setText($("status"), "Sending.");
   const result = await postJson(`api/control/${path}`, body, { "X-Control-Token": token }, path === "pick" ? 1 : 2, method);
-  $("status").textContent = result.ok ? "" : result.body.reason ?? result.body.detail ?? `Refused (${result.status}).`;
+  V.setText($("status"), result.ok ? "" : result.body.reason ?? result.body.detail ?? `Refused (${result.status}).`);
   return result.ok;
 }
 
@@ -225,10 +225,10 @@ function pickInfo(now) {
 
 function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
-  $("detail-title").textContent = prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers";
+  V.setText($("detail-title"), prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers");
   const d = prompt && room.divergence[prompt.id];
   const sure = d?.method === "lexical" ? null : V.jevConfidence(d);
-  $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? (d.method === "lexical" ? `, word overlap ${d.score.toFixed(2)} (Jev did not answer)` : `, answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`) : ""}` : "";
+  V.setText($("detail-meta"), prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? (d.method === "lexical" ? `, word overlap ${d.score.toFixed(2)} (Jev did not answer)` : `, answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`) : ""}` : "");
   V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "");
@@ -240,7 +240,7 @@ function renderDetail(now) {
   $("pick").hidden = !pick;
   if (pick) {
     $("pick").disabled = pick.disabled;
-    $("pick").textContent = pick.label;
+    V.setText($("pick"), pick.label);
   }
 }
 
@@ -251,17 +251,17 @@ function renderRound() {
   V.setHtml($("round-eval"), "");
   V.setHtml($("round-failures"), "");
   if (room.phase === "grading") {
-    $("round-title").textContent = `Case ${room.round.n}: grading`;
-    $("round-meta").textContent = `${room.round.graded ?? 0} graded so far. The room sees a count, never a direction.`;
+    V.setText($("round-title"), `Case ${room.round.n}: grading`);
+    V.setText($("round-meta"), `${room.round.graded ?? 0} graded so far. The room sees a count, never a direction.`);
   } else if (room.phase === "split") {
     const last = room.rounds[room.rounds.length - 1];
-    $("round-title").textContent = `Case ${last?.n ?? room.round.n}: results`;
-    $("round-meta").textContent = promptById(room, last?.prompt_id)?.text ?? "";
+    V.setText($("round-title"), `Case ${last?.n ?? room.round.n}: results`);
+    V.setText($("round-meta"), promptById(room, last?.prompt_id)?.text ?? "");
     V.setHtml($("round-split"), (last && V.split(room, last.n, { tall: 10 })) ?? "");
     V.setHtml($("round-failures"), last ? V.roundReasons(room, last.n) : "");
   } else if (room.phase === "closing") {
-    $("round-title").textContent = "The eval, with the reasons";
-    $("round-meta").textContent = "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.";
+    V.setText($("round-title"), "The eval, with the reasons");
+    V.setText($("round-meta"), "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.");
     V.setHtml($("round-eval"), V.evalTable(room));
     V.setHtml($("round-failures"), V.failures(room) + V.notes(room));
   }
@@ -306,12 +306,12 @@ function render() {
   }
   // Attendees read the round being opened, so submissions names the next one.
   const shown = room.phase === "submissions" ? room.round.n + 1 : room.round.n;
-  $("phase-label").textContent = shown ? `Case ${shown}` : "No case yet";
+  V.setText($("phase-label"), shown ? `Case ${shown}` : "No case yet");
   const pick = pickInfo(now);
   const next = NEXT[room.phase];
   // In closing the primary raises the closer, since going back to holding resets the room.
   const raisesCloser = room.phase === "closing" && Boolean(screenChannel);
-  $("next").textContent = pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label;
+  V.setText($("next"), pick ? pick.label : raisesCloser ? (closerShown ? "Back to the eval table" : "Show the closer on the shared screen") : next.label);
   $("next").disabled = pick ? pick.disabled : !raisesCloser && !next.to;
   $("finish").hidden = room.phase !== "split";
   $("cases-download").disabled = !room.prompts.length;
@@ -320,11 +320,11 @@ function render() {
   const answering = upNext && room.subjects.some((s) => ["queued", "running"].includes(answerFor(room, upNext.id, s.id).state));
   $("pick-next").hidden = !["holding", "submissions", "split"].includes(room.phase) || !upNext;
   $("pick-next").disabled = Boolean(answering);
-  $("pick-next").textContent = answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`;
+  V.setText($("pick-next"), answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`);
   $("pick-next").title = upNext ? oneLine(upNext.text) : "";
   const hidden = room.reasonsVisible === false;
-  $("reasons-toggle").textContent = hidden ? "Show comments to attendees" : "Hide comments from attendees";
-  $("reasons-state").textContent = hidden ? "Comments are hidden from attendees." : "Attendees can read comments.";
+  V.setText($("reasons-toggle"), hidden ? "Show comments to attendees" : "Hide comments from attendees");
+  V.setText($("reasons-state"), hidden ? "Comments are hidden from attendees." : "Attendees can read comments.");
   if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
@@ -339,10 +339,10 @@ function renderLink() {
     $("surface").hidden = true;
     $("gate").hidden = false;
     refused = true;
-    $("gate-why").textContent = "The room refused that token. Paste the one it printed when it started.";
+    V.setText($("gate-why"), "The room refused that token. Paste the one it printed when it started.");
     try { localStorage.removeItem("room-token"); } catch {}
   } else if (!link.live) {
-    $("banner").textContent = `Reconnecting. This is from ${seconds(new Date(link.since).toISOString(), Date.now())}s ago.`;
+    V.setText($("banner"), `Reconnecting. This is from ${seconds(new Date(link.since).toISOString(), Date.now())}s ago.`);
   }
 }
 
