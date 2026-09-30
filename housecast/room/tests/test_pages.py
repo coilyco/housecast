@@ -160,7 +160,9 @@ def test_the_attendee_page_is_one_casebook_column() -> None:
     # Holding is the title and the join address, so the casebook is not drawn there.
     assert "const [top, ...older] = waiting ? [] : casesNow();" in html
     css = (PAGE / "room.css").read_text(encoding="utf-8")
-    assert ".sheet .answer__text { max-height: 12rem; overflow: auto;" in css
+    assert ".sheet .answer__text { max-height:" not in css, (
+        "an answer is read whole, never scrolled"
+    )
 
 
 def test_the_screen_is_the_same_casebook_without_buttons() -> None:
@@ -381,3 +383,14 @@ def test_a_redraw_never_clears_text_a_reader_has_selected() -> None:
     for name in ("index.html", "screen.html", "present.html"):
         html = (PAGE / name).read_text(encoding="utf-8")
         assert 'V.setText($("' in html, name
+
+
+def test_a_long_answer_is_read_whole_on_the_attendee_page_and_the_shared_screen() -> None:
+    """Answers run about 100 words. Attendee cards grow, and /screen fits its type to the window."""
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    assert "overflow: auto" not in css.split(".sheet .answer__text {", 1)[1].split("}", 1)[0]
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "function fitAnswers()" in screen and "fitAnswers();" in screen
+    assert 'window.addEventListener("resize", fitAnswers);' in screen
+    assert "27vh" not in css.split(".screen .sheet .answer__text", 1)[-1]
+    assert "grid-template-rows: repeat(2, minmax(0, 1fr))" in css

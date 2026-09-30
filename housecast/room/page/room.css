@@ -41,7 +41,7 @@ html.attendee { font-size: 18px; scroll-padding-top: 6rem; }
 html.present { font-size: 16px; }
 
 .wrap { max-width: 64rem; margin: 0 auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.screen .wrap { max-width: none; min-height: 100dvh; padding: 3vmin 4vmin; gap: 2.5vmin; }
+.screen .wrap { max-width: none; min-height: 100dvh; padding: 2vmin 3vmin; gap: 2vmin; }
 
 .eyebrow {
   margin: 0;
@@ -266,7 +266,7 @@ p { margin: 0; }
 @media (min-width: 38rem) { .sheet__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 70rem) { .sheet__answers { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .sheet .answer { padding: 0.75rem 0.85rem; gap: 0.5rem; }
-.sheet .answer__text { max-height: 12rem; overflow: auto; margin-bottom: 0.3rem; font-size: 1.3rem; line-height: 1.35; color: var(--text); }
+.sheet .answer__text { margin-bottom: 0.3rem; font-size: 1.3rem; line-height: 1.35; color: var(--text); }
 .sheet .answer .verdicts { margin-top: auto; }
 .sheet .answer__text:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tally__share { color: var(--c); }
@@ -291,10 +291,7 @@ p { margin: 0; }
 .screen .case__text { color: var(--text); font-size: clamp(1.3rem, 3.6vmin, 2.4rem); font-weight: 600; line-height: 1.25; }
 .screen .case__code { max-height: 27vh; font-size: clamp(0.72rem, 1.7vmin, 1rem); }
 .screen .sheets[data-phase="split"] .case__code { max-height: 20vh; }
-.screen .sheet__answers { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4vmin; }
-@media (max-aspect-ratio: 4/3) { .screen .sheet__answers { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .screen .sheet .answer { padding: 1.2vmin 1.4vmin; }
-.screen .sheet .answer__text { max-height: 27vh; font-size: clamp(1.15rem, 3vmin, 1.9rem); }
 .screen .tally__share { font-size: clamp(1.4rem, 4vmin, 2.6rem); }
 .screen .tally__counts { font-size: clamp(0.8rem, 1.8vmin, 1.1rem); }
 
@@ -360,3 +357,27 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
   .measure__seg { padding: 0 0.5rem; border-left: 0; }
   .measure__tag { padding-right: 0.5rem; }
 }
+
+/* /screen: the top case fills the window and its answers share it two by two, so a long
+   answer is read whole. screen.html fits the type to the longest answer. */
+.screen #sheet-top { height: calc(100dvh - 4vmin); }
+.screen #sheet-top .sheet { height: 100%; }
+.screen .sheet__answers { flex: 1; min-height: 0; gap: 1.4vmin; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.screen .sheet .answer { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); gap: 0.4rem 0.8rem; min-height: 0; overflow: hidden; }
+.screen .sheet .answer__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 0 0.7em; }
+.screen .sheet .answer__head .logo { width: 2.4rem; height: 2.4rem; }
+.screen .sheet .answer__head .who__name, .screen .sheet .answer__head .who__role, .screen .sheet .answer__head .who__model { align-self: center; }
+.screen .sheet .answer__state { display: none; }
+.screen .sheet .answer__text { flex: 1 1 0; min-height: 0; max-height: none; overflow: hidden; font-size: 1.6rem; }
+.screen .sheet .answer__head { grid-column: 1; grid-row: 1; }
+.screen .sheet .answer__text { grid-column: 1 / -1; grid-row: 2; }
+.screen .sheet .answer .tally { grid-column: 2; grid-row: 1; width: auto; margin: 0; display: flex; align-items: baseline; gap: 0.6rem; }
+.screen .sheet .answer .tally .k-progress { display: none; }
+.screen .sheet .answer .tally__share { font-size: 1.6rem; }
+.screen .sheet .answer .tally__counts { font-size: 1rem; }
+.screen .sheet .measure { padding: 0.25rem 0.6rem; }
+.screen .sheet { padding: 1.2vmin; gap: 1vmin; }
+.screen .case { padding: 0.8vmin 1.4vmin; }
+.screen .case__text { font-size: clamp(1.1rem, 2.8vmin, 1.8rem); }
+.screen .sheet .answer { padding: 1vmin 1.2vmin; }
+.screen #sheet-old:empty { display: none; }
