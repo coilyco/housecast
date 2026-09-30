@@ -327,3 +327,6 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
   .sheet--old > summary { padding: 0.7rem 0.6rem; }
   .measure { padding: 0.5rem 0.75rem; }
 }
+
+/* Jev's per-answer check: small, neutral, and worded as a machine check. */
+.jev-chip { margin: 0; align-self: flex-start; text-transform: none; letter-spacing: 0; }

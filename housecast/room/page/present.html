@@ -75,7 +75,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
           <h2 id="incoming-title">Cases</h2>
           <div class="sort" role="group" aria-label="Sort prompts">
-            <button class="k-btn k-btn--ghost" type="button" data-sort="divergence" aria-pressed="true">Most split</button>
+            <button class="k-btn k-btn--ghost" type="button" data-sort="divergence" aria-pressed="true">Most different</button>
             <button class="k-btn k-btn--ghost" type="button" data-sort="newest" aria-pressed="false">Newest</button>
           </div>
           <button class="k-btn k-btn--ghost" type="button" id="cases-download" disabled>Download cases as JSON</button>
@@ -231,7 +231,8 @@ function renderDetail(now) {
   const prompt = selected ? promptById(room, selected) : null;
   $("detail-title").textContent = prompt ? V.splitPrompt(prompt.text).question || prompt.text : "Pick a case to read its four answers";
   const d = prompt && room.divergence[prompt.id];
-  $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? `, split ${d.score.toFixed(2)} ${d.method === "lexical" ? "by word overlap" : "by stance"}` : ""}` : "";
+  const sure = d?.method === "lexical" ? null : V.jevConfidence(d);
+  $("detail-meta").textContent = prompt ? `Prompt ${prompt.seq}${d?.state === "done" ? (d.method === "lexical" ? `, word overlap ${d.score.toFixed(2)} (Jev did not answer)` : `, answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`) : ""}` : "";
   V.setHtml($("detail-case"), prompt ? V.caseCard(prompt, { withText: false, withContext: true, presenter: true }) : "");
   V.setHtml($("detail-answers"), prompt ? room.subjects.map((s) => V.answerCard(room, prompt.id, s, now, "", { cause: true })).join("") : "");
   V.setHtml($("detail-jev"), prompt ? V.measure(room, prompt.id) : "");

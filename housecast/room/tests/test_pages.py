@@ -103,7 +103,8 @@ def test_the_machine_measurement_sits_under_the_case_and_is_not_a_grade() -> Non
     """Jev split shows once a divergence row exists, labelled a measurement, backup marked."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Machine measurement, not a grade" in views
-    assert "by word overlap" in views and "Jev did not answer" in views
+    assert "Word overlap" in views and "Jev did not answer" in views
+    assert "0 means the answers take the same stance" in views and "by stance" not in views
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "${measure(room, r.prompt_id)}" in body and "r.split ? measure(" not in body
     # The presenter reads it beside the four answers, before picking.
