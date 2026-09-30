@@ -261,11 +261,12 @@ function renderRound() {
     $("round-title").textContent = `Case ${last?.n ?? room.round.n}: results`;
     $("round-meta").textContent = promptById(room, last?.prompt_id)?.text ?? "";
     V.setHtml($("round-split"), (last && V.split(room, last.n, { tall: 10 })) ?? "");
+    V.setHtml($("round-failures"), last ? V.roundReasons(room, last.n) : "");
   } else if (room.phase === "closing") {
     $("round-title").textContent = "The eval, with the reasons";
     $("round-meta").textContent = "The shared screen shows the table without reasons. The reasons are attendee-typed, so they're here to read aloud.";
     V.setHtml($("round-eval"), V.evalTable(room));
-    V.setHtml($("round-failures"), V.failures(room));
+    V.setHtml($("round-failures"), V.failures(room) + V.notes(room));
   }
 }
 

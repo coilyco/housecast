@@ -185,12 +185,13 @@ function tallyHtml(cell) {
 }
 
 /** One case's body: the prompt, four answer cards side by side, then Jev's box. */
-function sheetBody(room, r, { now, controls = null } = {}) {
+function sheetBody(room, r, { now, controls = null, reasons = false } = {}) {
   const cells = r.split ? splitFor(room, r.n) : null;
   const cards = room.subjects
     .map((s) => {
       const cell = cells?.find((c) => c.subject.id === s.id);
-      return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) : ""));
+      const said = cell && reasons ? reasonsHtml(room, r.n, s.id) : "";
+      return answerCard(room, r.prompt_id, s, now, (controls ? controls(s) : "") + (cell ? tallyHtml(cell) + said : ""));
     })
     .join("");
   // Jev's box shows as soon as a divergence row exists, so grading is not blind to it.
@@ -252,6 +253,47 @@ function failures(room, { withReasons = true } = {}) {
     .join("");
 }
 
+/** PASS reasons for the presenter to read aloud, by agent. "" when there are none. */
+function notes(room) {
+  if (!room.notes?.length) return "";
+  const bySubject = new Map();
+  for (const row of room.notes) {
+    if (!bySubject.has(row.subject_id)) bySubject.set(row.subject_id, []);
+    bySubject.get(row.subject_id).push(row);
+  }
+  const rows = [...bySubject.entries()].map(([id, list]) => {
+    const subject = subjectById(room, id);
+    const body = list.map((r) => `<span>${escapeHtml(r.reason)} <span class="dim">(round ${r.n})</span></span>`).join("<br>");
+    return `<li style="--c:${lookOf(room, subject).color}">${who(room, subject)}<span>${body}</span></li>`;
+  });
+  return `<li class="dim">What worked, in the room's words</li>${rows.join("")}`;
+}
+
+// Typed reasons for one agent in one round, both verdicts. The failing ones ride on
+// `failures` and the passing ones on `notes`. Empty unless the view carries them.
+function reasonsFor(room, n, subjectId) {
+  const pick = (list, verdict) =>
+    (list ?? []).filter((x) => x.n === n && x.subject_id === subjectId && x.reason).map((x) => ({ verdict, reason: x.reason }));
+  return [...pick(room.notes, "pass"), ...pick(room.failures, "fail")];
+}
+
+/** What the room said about one agent, under its answer on the results card. */
+function reasonsHtml(room, n, subjectId) {
+  const rows = reasonsFor(room, n, subjectId);
+  if (!rows.length) return "";
+  const li = (r) => `<li data-verdict="${r.verdict}"><span class="reasons__v">${r.verdict === "pass" ? "PASS" : "FAIL"}</span> ${escapeHtml(r.reason)}</li>`;
+  return `<ul class="reasons" aria-label="What the room said">${rows.map(li).join("")}</ul>`;
+}
+
+/** The presenter's results list: every agent's reasons for one round. "" when none. */
+function roundReasons(room, n) {
+  const rows = room.subjects
+    .map((s) => ({ s, html: reasonsHtml(room, n, s.id) }))
+    .filter((x) => x.html)
+    .map(({ s, html }) => `<li style="--c:${lookOf(room, s).color}">${who(room, s)}${html}</li>`);
+  return rows.length ? `<li class="dim">What the room said</li>${rows.join("")}` : "";
+}
+
 /** Sets markup only when it changed, so a once-a-second redraw doesn't re-announce it. */
 function setHtml(el, html) {
   if (el.dataset.html !== html) {
@@ -260,5 +302,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { roundReasons, notes, jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();

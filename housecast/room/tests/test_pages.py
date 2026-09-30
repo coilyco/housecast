@@ -55,7 +55,7 @@ def test_earlier_cases_can_only_read() -> None:
     render = html[html.index("function render()") :]
     start = render.index('$("old-cases")')
     old = render[start : render.index("\n}\n", start)]
-    assert "V.sheetBody(room, r, { now })" in old  # no controls argument
+    assert "V.sheetBody(room, r, { now, reasons: true })" in old  # reasons, no controls
     assert "gradeControls" not in old and "data-verdict" not in old
     # Only the case being graded is handed the controls, and only while grading is open.
     assert "controls: live ? gradeControls : null" in render
@@ -69,7 +69,7 @@ def test_the_tally_shows_only_once_the_results_are_open() -> None:
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     body = views[views.index("function sheetBody") : views.index("/** A case as a sheet.")]
     assert "const cells = r.split ? splitFor(room, r.n) : null;" in body
-    assert 'cell ? tallyHtml(cell) : ""' in body
+    assert 'cell ? tallyHtml(cell) + said : ""' in body and "cell && reasons ? reasonsHtml(" in body
 
 
 def test_no_run_status_reads_like_a_grade() -> None:
@@ -271,3 +271,21 @@ def test_a_persona_shows_its_model_label_and_nothing_when_the_snapshot_has_none(
     assert 'typeof subject.model_label === "string" ? subject.model_label : ""' in room
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert 'look.model ? `<span class="who__model">' in views
+
+
+def test_the_presenter_reads_pass_reasons_and_the_room_pages_never_draw_them() -> None:
+    """PASS reasons come as `notes` on the presenter snapshot, and only /present draws them."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "V.failures(room) + V.notes(room)" in present
+    for name in ("index.html", "screen.html"):
+        assert "V.notes(" not in (PAGE / name).read_text(encoding="utf-8"), name
+
+
+def test_typed_reasons_show_on_the_attendee_results_and_the_presenter_never_on_the_screen() -> None:
+    """Kai: attendees and /present read what the room said, and /screen shows counts only."""
+    index = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert "reasons: true" in index
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert "reasons: true" not in screen and "roundReasons" not in screen
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "V.roundReasons(room, last.n)" in present

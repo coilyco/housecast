@@ -49,6 +49,8 @@ function fromSnapshot(snapshot) {
     divergence: {},
     rounds: [...(snapshot.rounds ?? [])],
     failures: snapshot.failures ?? [],
+    // PASS reasons, sent to the presenter only. Absent on the attendee and screen views.
+    notes: snapshot.notes ?? [],
   };
   for (const answer of snapshot.answers ?? []) room.answers[answerKey(answer.prompt_id, answer.subject_id)] = answer;
   for (const row of snapshot.divergence ?? []) room.divergence[row.prompt_id] = row;
@@ -289,6 +291,7 @@ function demoRoom(phase) {
     divergence: [],
     rounds: [],
     failures: [],
+    notes: [],
   };
   if (phase === "holding") return snapshot;
   DEMO_PROMPTS.forEach(([text, score, commitment, replies], i) => {
@@ -312,6 +315,8 @@ function demoRoom(phase) {
   );
   if (phase === "split" || phase === "closing") {
     snapshot.rounds.push({ n: 1, prompt_id: "p1", split: { s1: { pass: 20, fail: 3 }, s2: { pass: 14, fail: 9 }, s3: { pass: 3, fail: 20 }, s4: { pass: 17, fail: 6 } } });
+    snapshot.failures = [{ n: 1, subject_id: "s3", reason: "Refuses nothing, so there is no boundary to check." }];
+    snapshot.notes = [{ n: 1, subject_id: "s1", verdict: "pass", reason: "Named the boundary and stuck to it." }];
     if (phase === "closing") {
       snapshot.rounds.push({ n: 2, prompt_id: "p2", split: { s1: { pass: 21, fail: 2 }, s2: { pass: 12, fail: 11 }, s3: { pass: 18, fail: 5 }, s4: { pass: 4, fail: 19 } } });
       snapshot.rounds.push({ n: 3, prompt_id: "p3", split: { s1: { pass: 22, fail: 1 }, s2: { pass: 20, fail: 3 }, s3: { pass: 8, fail: 15 }, s4: { pass: 19, fail: 4 } } });
@@ -323,6 +328,10 @@ function demoRoom(phase) {
       { n: 1, subject_id: "s3", reason: "Trying anything once is not a boundary." },
       { n: 1, subject_id: "s2", reason: "Enthusiastic past the evidence." },
       { n: 1, subject_id: "s4", reason: "Hedged when asked for a position." },
+    ];
+    snapshot.notes = [
+      { n: 1, subject_id: "s1", verdict: "pass", reason: "Named the boundary and stuck to it." },
+      { n: 1, subject_id: "s4", verdict: "pass", reason: "Declined without lecturing." },
     ];
   }
   return snapshot;

@@ -340,3 +340,11 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
 .measure__seg { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0 0.9rem; border-left: 1px solid var(--k-line-quiet); font-weight: 700; color: var(--text); }
 .measure__meter { width: 5rem; height: 0.5rem; border-radius: 999px; background: var(--k-raised); overflow: hidden; }
 .measure__meter i { display: block; width: calc(var(--v) * 100%); height: 100%; background: var(--k-brand); }
+
+/* What the room typed about an answer, under its tally. Attendees and presenter only. */
+.reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.reasons li { overflow-wrap: anywhere; color: var(--text); }
+.reasons__v { margin-right: 0.4rem; font-family: var(--mono); font-weight: 700; }
+.reasons li[data-verdict="pass"] .reasons__v { color: var(--pass); }
+.reasons li[data-verdict="fail"] .reasons__v { color: var(--fail); }
+.failures .reasons li { display: block; padding: 0; border-left: 0; background: none; }
