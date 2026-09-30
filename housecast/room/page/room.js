@@ -4,7 +4,7 @@
 "use strict";
 
 const PHASES = ["holding", "submissions", "grading", "split", "closing"];
-const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades", "removed"];
+const EVENT_KINDS = ["prompt", "answer", "divergence", "phase", "round", "grades", "removed", "reasons"];
 // A slow route is normal: the bar fills over a minute, and only 100s or more worries.
 const SLOW_S = 60;
 const LONG_S = 100;
