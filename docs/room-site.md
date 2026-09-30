@@ -1,7 +1,6 @@
 # The room as a static site
 
-How the room pages ship without the room server serving them, for the
-PyLadies Remote move off kai-server (teable:coilyco/deploy#8452).
+How the room pages ship without the room server serving them (teable:coilyco/deploy#8452).
 
 ## Same-origin
 
@@ -28,6 +27,10 @@ Every page gets `<base href="/">`, so relative URLs resolve from the root and
 `/screen/` with a trailing slash works like `/screen`. The pages hold no
 fragment links, which a base would redirect. `housecast/tests/test_room_site.py`
 holds the layout, the base and the no-absolute-API rule.
+
+## Two hosts
+
+`just room-site OUT --split` writes `public/` (the attendee page and `/screen`, no `/present`) and `gated/` (`/present`, also at its root). Each carries the shared assets, logos and `404.html`, and `--site public` or `--site gated` writes one. Both hosts must forward `/api/*` to the room. The presenter's closer button reaches `/screen` over a `BroadcastChannel`, which is same-origin only, so across two hosts raise the closer with `#closer` on the screen's address.
 
 ## Publishing
 

@@ -15,11 +15,14 @@ from pathlib import Path
 PAGE = Path(__file__).resolve().parent.parent / "housecast/room/page"
 # Each route becomes a directory index, which is what the project-sites
 # viewer function rewrites an extensionless path to.
-ROUTES = {
+PUBLIC_ROUTES = {
     "index.html": "index.html",
     "screen.html": "screen/index.html",
-    "present.html": "present/index.html",
 }
+# The presenter's host serves /present at its root as well, so the bare address works.
+GATED_ROUTES = {"present.html": "present/index.html"}
+ROUTES = {**PUBLIC_ROUTES, **GATED_ROUTES}
+SITES = {"all": ROUTES, "public": PUBLIC_ROUTES, "gated": GATED_ROUTES}
 ASSETS = ("room.css", "room.js", "views.js")
 # Subjects name their logo as `creatures/<slug>.png`, so it ships beside the pages.
 LOGOS = "creatures"
@@ -53,15 +56,19 @@ def pin_base(html: str) -> str:
     return html[:head] + "\n" + BASE + html[head:]
 
 
-def export(out: Path) -> list[Path]:
+def export(out: Path, site: str = "all") -> list[Path]:
     if out.exists():
         shutil.rmtree(out)
     written = []
-    for source, target in ROUTES.items():
+    for source, target in SITES[site].items():
         dest = out / target
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(pin_base((PAGE / source).read_text(encoding="utf-8")), encoding="utf-8")
         written.append(dest)
+    if site == "gated":
+        root = out / "index.html"
+        root.write_text((out / "present/index.html").read_text(encoding="utf-8"), encoding="utf-8")
+        written.append(root)
     for name in ASSETS:
         shutil.copyfile(PAGE / name, out / name)
         written.append(out / name)
@@ -78,8 +85,16 @@ def export(out: Path) -> list[Path]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Export the room pages as a static site.")
     parser.add_argument("out", nargs="?", default="dist/room-site", type=Path)
+    parser.add_argument("--site", choices=sorted(SITES), default="all")
+    parser.add_argument("--split", action="store_true", help="write OUT/public and OUT/gated")
     args = parser.parse_args(argv)
-    for path in export(args.out):
+    if args.split:
+        args.out.mkdir(parents=True, exist_ok=True)
+        for site in ("public", "gated"):
+            for path in export(args.out / site, site):
+                print(path)
+        return 0
+    for path in export(args.out, args.site):
         print(path)
     return 0
 
