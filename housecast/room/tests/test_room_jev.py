@@ -142,21 +142,29 @@ async def graded(room: Room, marks: dict[str, str], reasons: dict[str, str]) -> 
     return engine
 
 
-def test_a_pass_keeps_its_reason_for_the_presenter_and_no_other_view_sees_it() -> None:
+def test_reasons_reach_attendees_once_results_open_and_never_the_screen() -> None:
     room = Room(subjects=SUBJECTS)
     marks = {"s1": "pass", "s2": "fail", "s3": "pass"}
-    asyncio.run(graded(room, marks, {"s1": "Named the trade-off.", "s2": "Hedged.", "s3": ""}))
+    engine = asyncio.run(
+        graded(room, marks, {"s1": "Named the trade-off.", "s2": "Hedged.", "s3": ""})
+    )
+    note = {"n": 1, "subject_id": "s1", "verdict": "pass", "reason": "Named the trade-off."}
     presenter = room.snapshot("presenter")
-    assert presenter["notes"] == [
-        {"n": 1, "subject_id": "s1", "verdict": "pass", "reason": "Named the trade-off."}
-    ]
+    assert presenter["notes"] == [note]
     assert [f["reason"] for f in presenter["failures"]] == ["Hedged."]
-    for view in ("attendee", "screen"):
-        assert "notes" not in room.snapshot(view)
-        assert "Named the trade-off." not in json.dumps(room.snapshot(view))
-    room.phase = "closing"
-    assert "Named the trade-off." not in json.dumps(room.snapshot("attendee"))
-    assert "Named the trade-off." not in json.dumps(room.snapshot("screen"))
+    # Still grading: nobody but the presenter reads a reason.
+    attendee = room.snapshot("attendee")
+    assert attendee["notes"] == [] and attendee["failures"] == []
+    assert "Hedged." not in json.dumps(attendee) and "trade-off" not in json.dumps(attendee)
+    for phase in ("split", "closing"):
+        engine.set_phase(phase)
+        open_ = room.snapshot("attendee")
+        assert open_["notes"] == [note]
+        assert [f["reason"] for f in open_["failures"]] == ["Hedged."]
+        screen = json.dumps(room.snapshot("screen"))
+        assert "notes" not in room.snapshot("screen")
+        assert "Hedged." not in screen and "trade-off" not in screen
+    assert room.snapshot("screen")["failures"] == [{"n": 1, "subject_id": "s2"}]
 
 
 def test_a_grade_on_a_card_with_no_answer_is_refused_and_nothing_is_stored() -> None:

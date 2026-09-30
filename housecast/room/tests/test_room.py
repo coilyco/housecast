@@ -214,6 +214,7 @@ def test_a_round_withholds_direction_until_the_split() -> None:
     engine.grade(1, "d2", {"s1": "pass"}, {})  # a re-grade replaces
     attendee = room.snapshot()
     assert attendee["round"]["graded"] == 2 and "split" not in attendee["rounds"][0]
+    assert attendee["failures"] == [] and "too vague" not in str(attendee)
     graded = room.project(
         {"rev": 1, "at": "t", "kind": "grades", "data": {"n": 1, "device": "d3", "grades": {}}},
         "attendee",
@@ -223,7 +224,9 @@ def test_a_round_withholds_direction_until_the_split() -> None:
     split = room.snapshot()["rounds"][0]["split"]
     assert split["s1"] == {"pass": 2, "fail": 0, "share": 1.0}
     assert split["s2"]["share"] == 0.0 and split["s3"]["share"] is None
-    assert "failures" not in room.snapshot()
+    # Results are open, so an attendee reads the reason. The recorded screen never does.
+    assert room.snapshot()["failures"] == [{"n": 1, "subject_id": "s2", "reason": "too vague"}]
+    assert "failures" not in room.snapshot("screen")
     engine.set_phase("closing")
     assert room.snapshot()["failures"] == [{"n": 1, "subject_id": "s2", "reason": "too vague"}]
     assert room.snapshot("screen")["failures"] == [{"n": 1, "subject_id": "s2"}]
