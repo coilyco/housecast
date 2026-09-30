@@ -33,7 +33,7 @@
   .gate { max-width: 30rem; }
 </style>
 </head>
-<body class="present">
+<body class="present k-page">
 <p class="demo-chip" id="demo-chip" hidden>demo data</p>
 
 <form class="wrap gate" id="gate" hidden>
@@ -50,6 +50,8 @@
     <button class="next k-btn k-btn--primary" id="next" type="button"></button>
     <button class="next k-btn k-btn--primary" id="pick-next" type="button" hidden></button>
     <button class="next k-btn k-btn--primary" id="finish" type="button" hidden>Finish: show the eval table</button>
+    <button class="k-btn k-btn--ghost" id="reasons-toggle" type="button"></button>
+    <p class="dim" id="reasons-state" role="status"></p>
     <p class="status" id="status" role="status"></p>
   </header>
   <main class="wrap k-dense" style="max-width:90rem">
@@ -151,6 +153,7 @@ async function control(path, body, method = "POST") {
     if (method === "DELETE") room.prompts = room.prompts.filter((p) => p.id !== path.split("/")[1]);
     if (path === "phase") room.phase = body.phase;
     if (path === "pick") { room.round = { n: room.round.n + 1, prompt_id: body.prompt_id, graded: 0 }; room.phase = "grading"; }
+    if (path === "reasons") room.reasonsVisible = body.visible;
     render();
     return true;
   }
@@ -328,6 +331,9 @@ function render() {
   $("pick-next").disabled = Boolean(answering);
   $("pick-next").textContent = answering ? `Next case is still answering (${left} left)` : `Pick next case (${left} left)`;
   $("pick-next").title = upNext ? oneLine(upNext.text) : "";
+  const hidden = room.reasonsVisible === false;
+  $("reasons-toggle").textContent = hidden ? "Show comments to attendees" : "Hide comments from attendees";
+  $("reasons-state").textContent = hidden ? "Comments are hidden from attendees." : "Attendees can read comments.";
   if (room.phase === "submissions" && selected && isUsed(selected)) selected = null;
   if (!selected && room.round.prompt_id) selected = room.round.prompt_id;
   renderIncoming();
@@ -393,6 +399,13 @@ $("pick-next").addEventListener("click", () => {
   void control("pick", { prompt_id: upNext.id });
 });
 $("finish").addEventListener("click", () => void control("phase", { phase: "closing" }));
+$("reasons-toggle").addEventListener("click", async () => {
+  const visible = room.reasonsVisible === false;
+  if (await control("reasons", { visible })) {
+    room.reasonsVisible = visible;
+    render();
+  }
+});
 $("case-run").addEventListener("click", () => {
   if (selected) void control(`cases/${selected}/run`, {});
 });

@@ -297,3 +297,20 @@ def test_each_role_in_the_cases_list_is_its_own_line_with_its_status() -> None:
     assert '<span class="chips roles">${chips(p)}</span>' in present
     assert '<span class="chip__state">${word}</span>' in present
     assert ".roles { flex-direction: column;" in present
+
+
+def test_the_presenter_can_hide_comments_from_attendees_and_sees_the_state() -> None:
+    """One switch posts {visible} to the engine and says which way it is set."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'control("reasons", { visible })' in present
+    assert "Hide comments from attendees" in present and "Show comments to attendees" in present
+    assert "Attendees can read comments." in present
+    room = (PAGE / "room.js").read_text(encoding="utf-8")
+    assert "reasonsVisible: snapshot.reasons_visible ?? true," in room
+
+
+def test_every_page_wears_the_kits_orbits_background() -> None:
+    """The kit's page texture, the five discs top right, comes from k-page on the body."""
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'k-page">' in html.split("<body", 1)[1].split(">", 1)[0] + ">", name

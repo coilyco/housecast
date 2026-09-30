@@ -19,8 +19,8 @@ PUBLIC_ROUTES = {
     "index.html": "index.html",
     "screen.html": "screen/index.html",
 }
-# The presenter's host serves /present at its root as well, so the bare address works.
-GATED_ROUTES = {"present.html": "present/index.html"}
+# The presenter host serves /present at its root, and /screen for a same-origin closer.
+GATED_ROUTES = {"present.html": "present/index.html", "screen.html": "screen/index.html"}
 ROUTES = {**PUBLIC_ROUTES, **GATED_ROUTES}
 SITES = {"all": ROUTES, "public": PUBLIC_ROUTES, "gated": GATED_ROUTES}
 ASSETS = ("coilyco-kit.css", "room.css", "room.js", "views.js")

@@ -83,6 +83,11 @@ def test_the_split_keeps_the_presenter_off_the_public_site(tmp_path: Path) -> No
     )
     assert "index.html" in public and "screen/index.html" in public and "404.html" in public
     assert not any(name.startswith("present") for name in public)
+    assert "screen/index.html" in sorted(
+        p.relative_to(tmp_path / "gated").as_posix()
+        for p in (tmp_path / "gated").rglob("*")
+        if p.is_file()
+    ), "the closer needs /screen on the presenter host"
     assert "present/index.html" in sorted(
         p.relative_to(tmp_path / "gated").as_posix()
         for p in (tmp_path / "gated").rglob("*")

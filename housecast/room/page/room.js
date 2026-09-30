@@ -43,6 +43,8 @@ function fromSnapshot(snapshot) {
     rev: snapshot.rev ?? 0,
     phase: snapshot.phase ?? "holding",
     round: snapshot.round ?? { n: 0, prompt_id: null, graded: 0 },
+    // The presenter snapshot says if attendees may read comments. On until told.
+    reasonsVisible: snapshot.reasons_visible ?? true,
     subjects: [...(snapshot.subjects ?? [])],
     prompts: [...(snapshot.prompts ?? [])].sort((a, b) => a.seq - b.seq),
     answers: {},
