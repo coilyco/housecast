@@ -20,8 +20,6 @@
   .incoming button[aria-current="true"] { border-color: var(--presenter); box-shadow: inset 4px 0 0 var(--presenter); }
   .incoming .score { font-family: var(--mono); font-weight: 700; }
   .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; font-size: 0.85rem; color: var(--dim); }
-  .src { padding: 0 0.5em; border-radius: 999px; border: 1px solid var(--line); font-size: 0.8rem; }
-  .src[data-src="prepared"] { border-color: var(--closing); color: var(--closing); }
   .chip { display: inline-flex; gap: 0.3em; align-items: center; }
   .chip .logo { width: 1.5em; height: 1.5em; }
   .roles { flex-direction: column; flex-wrap: nowrap; gap: 0.15rem; }
@@ -57,8 +55,8 @@
   <main class="wrap k-dense" style="max-width:90rem">
     <p class="banner" id="banner" role="status" hidden></p>
     <details class="panel" id="cases-panel">
-      <summary><h2 style="display:inline">Add prepared cases</h2></summary>
-      <p class="dim">A prepared case is answered ahead of time and stays hidden from the room until you pick it.</p>
+      <summary><h2 style="display:inline">Add cases</h2></summary>
+      <p class="dim">A case is answered ahead of time and stays hidden from the room until you pick it.</p>
       <div class="field">
         <label for="case-file" class="dim">Load a file of cases: a JSON list of {"text", "commitment"}</label>
         <input class="k-input" id="case-file" type="file" accept="application/json,.json">
@@ -196,10 +194,10 @@ function renderIncoming() {
         const used = room.rounds.some((r) => r.prompt_id === p.id) || room.round.prompt_id === p.id;
         return `<li><button type="button" data-prompt="${escapeHtml(p.id)}"${p.id === selected ? ' aria-current="true"' : ""}>
           <span>${escapeHtml(oneLine(p.text))}${used ? ' <span class="dim">(used)</span>' : ""}</span><span class="score">${score}</span>
-          <span class="chips"><span class="src" data-src="${escapeHtml(p.source ?? "attendee")}">${p.source === "prepared" ? "prepared" : "from the room"}</span>${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
+          <span class="chips">${p.commitment ? `<span>tests: ${escapeHtml(p.commitment)}</span>` : "<span>no commitment named</span>"}</span>
           <span class="chips roles">${chips(p)}</span></button></li>`;
       }).join("")
-    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add prepared ones above, or open proposals." : "No cases yet. Paste one above."}</li>`);
+    : `<li class="dim">${room.phase === "submissions" ? "No cases yet. They appear here as people propose them." : SHOW_PROPOSALS ? "No cases yet. Add some above, or open proposals." : "No cases yet. Paste one above."}</li>`);
 }
 
 /** The next case not yet picked, in the order the list shows, so stepping through is one click. */
@@ -419,7 +417,7 @@ $("case-delete").addEventListener("click", async () => {
 $("pick").addEventListener("click", () => {
   if (selected) void control("pick", { prompt_id: selected });
 });
-// ------------------------------------------------------ prepared cases
+// ------------------------------------------------------ added cases
 $("case-text").maxLength = CASE_MAX;
 document.querySelector('label[for="case-text"]').textContent = `Or add one by hand. Context first, then the question, up to ${CASE_MAX} characters`;
 function caseNote(text, tone) {

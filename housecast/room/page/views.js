@@ -96,8 +96,7 @@ function caseCard(prompt, { withText = true, withContext = withText, presenter =
   const tests = presenter && prompt.commitment ? `<p class="case__tests"><span class="case__label">tests:</span> ${escapeHtml(prompt.commitment)}</p>` : "";
   const code = withContext && context ? `<pre class="case__code" tabindex="0" aria-label="Prompt context">${escapeHtml(context)}</pre>` : "";
   const text = withText && question ? `<p class="case__text">${escapeHtml(question)}</p>` : "";
-  const from = !presenter ? "" : prompt.source === "prepared" ? "Prepared case" : prompt.source === "attendee" ? "Proposed by someone in the room" : "";
-  return `<div class="case">${tests}${code}${text}${from ? `<p class="case__from">${from}</p>` : ""}</div>`;
+  return `<div class="case">${tests}${code}${text}</div>`;
 }
 
 /** How many graders gave the majority verdict, said as a count, not a percent. */

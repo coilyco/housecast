@@ -336,3 +336,12 @@ def test_the_phone_role_rows_are_not_pills_so_a_wrapped_model_is_not_clipped() -
         and ".cast--row li { border-radius: var(--k-r-2);" in phone
     )
     assert ".cast--row .logo { grid-row: 1 / span 2; }" in phone
+
+
+def test_a_case_is_just_a_case_with_no_prepared_or_from_the_room_label() -> None:
+    """Attendee proposals are off, so every case is added by the presenter. The word is noise."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert "Add cases" in present and "Add prepared cases" not in present
+    assert 'class="src"' not in present and ">from the room</span>" not in present
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    assert "Prepared case" not in views and "Proposed by someone in the room" not in views
