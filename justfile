@@ -152,3 +152,7 @@ room-engine-pass *ARGS:
 # Hold a dev or rehearsal room under 30 simulated attendees for three rounds (writes to its log).
 room-load-test *ARGS:
     @uv run --extra room python scripts/room_load_test.py "$@"
+
+# Watch a live room read-only, one GET of /api/room per poll. `just room-watch --base https://room.example`.
+room-watch *ARGS:
+    @uv run --no-project python scripts/room_watch.py "$@"
