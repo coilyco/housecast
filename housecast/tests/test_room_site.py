@@ -68,3 +68,36 @@ def test_every_logo_a_page_can_name_is_exported(tmp_path: Path) -> None:
     shipped = sorted(p.name for p in (site.PAGE / "creatures").glob("*.png"))
     assert shipped
     assert sorted(p.name for p in (tmp_path / "creatures").glob("*.png")) == shipped
+
+
+def test_the_split_keeps_the_presenter_off_the_public_site(tmp_path: Path) -> None:
+    """The public host serves the attendee page and the recording screen, and no /present."""
+    site = _load()
+    site.export(tmp_path / "public", "public")
+    site.export(tmp_path / "gated", "gated")
+    public = sorted(
+        p.relative_to(tmp_path / "public").as_posix()
+        for p in (tmp_path / "public").rglob("*")
+        if p.is_file()
+    )
+    assert "index.html" in public and "screen/index.html" in public and "404.html" in public
+    assert not any(name.startswith("present") for name in public)
+    assert "present/index.html" in sorted(
+        p.relative_to(tmp_path / "gated").as_posix()
+        for p in (tmp_path / "gated").rglob("*")
+        if p.is_file()
+    )
+    # The gated root is the presenter page too, so its bare address works.
+    assert (tmp_path / "gated" / "index.html").read_text(encoding="utf-8") == (
+        tmp_path / "gated" / "present" / "index.html"
+    ).read_text(encoding="utf-8")
+    # Each directory carries the shared files its pages load.
+    for root in ("public", "gated"):
+        for shared in ("room.css", "room.js", "views.js", "404.html"):
+            assert (tmp_path / root / shared).is_file(), (root, shared)
+
+
+def test_split_writes_both_directories(tmp_path: Path) -> None:
+    assert _load().main([str(tmp_path / "out"), "--split"]) == 0
+    assert (tmp_path / "out" / "public" / "screen" / "index.html").is_file()
+    assert (tmp_path / "out" / "gated" / "present" / "index.html").is_file()
