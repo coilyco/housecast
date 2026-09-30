@@ -223,3 +223,10 @@ def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:
     screen = (PAGE / "screen.html").read_text(encoding="utf-8")
     assert 'room.phase === "submissions" && !SHOW_PROPOSALS' in screen
     assert '$("main").hidden = showCloser || sheets || opening;' in screen
+
+
+def test_a_card_with_no_answer_offers_no_grade() -> None:
+    """The engine counts any grade, so an empty or failed answer must not be gradable."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
+    assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
