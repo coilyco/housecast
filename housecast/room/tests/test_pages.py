@@ -330,12 +330,12 @@ def test_every_page_wears_the_kits_orbits_background() -> None:
 def test_the_phone_role_rows_are_not_pills_so_a_wrapped_model_is_not_clipped() -> None:
     """At 320px the model wraps under the name, and a full pill radius cut its first letters."""
     css = (PAGE / "room.css").read_text(encoding="utf-8")
-    phone = css[css.rindex("@media (max-width: 480px)") :]
+    phone = css[css.rindex("A role row is three lines") :]
     assert (
         ".cast--row { flex-direction: column;" in phone
         and ".cast--row li { border-radius: var(--k-r-2);" in phone
     )
-    assert ".cast--row .logo { grid-row: 1 / span 2; }" in phone
+    assert ".cast--row .logo { grid-row: 1 / span 3; }" in phone
 
 
 def test_a_case_is_just_a_case_with_no_prepared_or_from_the_room_label() -> None:
@@ -345,3 +345,11 @@ def test_a_case_is_just_a_case_with_no_prepared_or_from_the_room_label() -> None
     assert 'class="src"' not in present and ">from the room</span>" not in present
     views = (PAGE / "views.js").read_text(encoding="utf-8")
     assert "Prepared case" not in views and "Proposed by someone in the room" not in views
+
+
+def test_every_persona_reads_as_name_then_role_then_model() -> None:
+    """Kai: wherever a persona is listed it is the creature name, its role, and its model."""
+    views = (PAGE / "views.js").read_text(encoding="utf-8")
+    body = views[views.index("function who(") : views.index("function subjectById")]
+    assert body.index("who__name") < body.index("${role}${model}")
+    assert 'class="who__role"' in body and "cast__role" not in views

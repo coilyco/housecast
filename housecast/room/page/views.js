@@ -10,8 +10,9 @@ function who(room, subject) {
   const mark = look.logo
     ? `<img class="logo" src="${escapeHtml(look.logo)}" alt="" width="200" height="200" decoding="async">`
     : "";
+  const role = look.role ? `<span class="who__role">${escapeHtml(look.role)}</span>` : "";
   const model = look.model ? `<span class="who__model">${escapeHtml(look.model)}</span>` : "";
-  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${model}</span>`;
+  return `<span class="who" style="--c:${look.color}">${mark}<span class="who__name">${escapeHtml(subject.label)}</span>${role}${model}</span>`;
 }
 
 function subjectById(room, id) {
@@ -23,7 +24,7 @@ function cast(room, { full = false } = {}) {
   return room.subjects
     .map((s) => {
       const look = lookOf(room, s);
-      const more = full && look.role ? `<span class="cast__role">${escapeHtml(look.role)}</span><span class="cast__line">${escapeHtml(look.line)}</span>` : "";
+      const more = full && look.line ? `<span class="cast__line">${escapeHtml(look.line)}</span>` : "";
       return `<li style="--c:${look.color}">${who(room, s)}${more}</li>`;
     })
     .join("");
