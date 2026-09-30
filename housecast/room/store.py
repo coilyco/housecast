@@ -170,7 +170,7 @@ class Room:
         if prompt["id"] in self.picked():
             return shown
         if view == "screen" or prompt["source"] == "prepared":
-            shown = {k: v for k, v in shown.items() if k != "text"}
+            shown = {k: v for k, v in shown.items() if k not in ("text", "input_sha256")}
             shown["commitment"] = ""
         return shown
 
