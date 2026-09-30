@@ -30,6 +30,10 @@ MAX_REASON = 140
 VERDICTS = frozenset({"pass", "fail"})
 
 
+# A settled no-answer is not Jev's call, so the reply check is a fact of the state.
+NO_REPLY = {"replied": False, "confidence": 1.0, "p": None, "source": "state"}
+
+
 class PromptRefusedError(Exception):
     """A request the room will not take. The page shows `reason` verbatim."""
 
@@ -127,6 +131,7 @@ class Engine:
                         "started_at": started,
                         "finished_at": now(),
                         "reason": _reason(failed),
+                        "jev": NO_REPLY,
                     },
                 )
             else:
@@ -134,8 +139,10 @@ class Engine:
                 if text:
                     done.update(state="done", text=text)
                 else:
-                    done.update(state="empty", reason="the subject returned no text")
+                    done.update(state="empty", reason="the subject returned no text", jev=NO_REPLY)
                 self.room.emit("answer", done)
+                if text:
+                    self._spawn(self._check_reply(prompt, done))
         await self._maybe_score(prompt)
 
     def _keep_raw(self, base: dict[str, str]) -> Callable[[int, str], None]:
@@ -184,6 +191,28 @@ class Engine:
                 return answer
             empties += 1
 
+    async def _check_reply(self, prompt: dict[str, Any], answer: dict[str, Any]) -> None:
+        """One Jev call after an answer settles. It never holds the round."""
+        check: dict[str, Any] | None
+        try:
+            async with self._slots:
+                p = await models.replied(self.client, self.cfg, prompt["text"], answer["text"])
+            check = {
+                "replied": p >= 0.5,
+                "confidence": round(max(p, 1 - p), 4),
+                "p": round(p, 4),
+                "source": "jev",
+            }
+        except Exception:
+            check = None
+        key = (answer["prompt_id"], answer["subject_id"])
+        current = self.room.answers.get(key)
+        # A re-run, fallback or delete since the call began has replaced this answer.
+        if current is None or current.get("finished_at") != answer.get("finished_at"):
+            return
+        if current["state"] == "done":
+            self.room.emit("answer", {**current, "jev": check})
+
     async def _maybe_score(self, prompt: dict[str, Any]) -> None:
         answers = self.room.answers_for(prompt["id"])
         if len(answers) < len(self.room.subjects) or any(
@@ -204,13 +233,27 @@ class Engine:
             return
         # Marked before the await, so two subjects finishing at once score once.
         self.room.divergence[prompt["id"]] = {**base, "state": "scoring"}
+        confidence: float | None = None
+        probabilities: dict[str, float] | None = None
         try:
-            score = await models.stance(self.client, self.cfg, prompt["text"], texts, prompt["id"])
+            score, confidence, probabilities = await models.stance_read(
+                self.client, self.cfg, prompt["text"], texts, prompt["id"]
+            )
             method = "stance"
-        except Exception:  # lexical is the measured fallback, looser than Jev
+        except (
+            Exception
+        ):  # lexical is the measured fallback, looser than Jev, and has no confidence
             score, method = models.lexical(texts), "lexical"
         self.room.emit(
-            "divergence", {**base, "state": "done", "score": round(score, 4), "method": method}
+            "divergence",
+            {
+                **base,
+                "state": "done",
+                "score": round(score, 4),
+                "method": method,
+                "confidence": None if confidence is None else round(confidence, 4),
+                "probabilities": probabilities,
+            },
         )
 
     def _maybe_fall_back(self, prompt: dict[str, Any], answers: list[dict[str, Any]]) -> bool:
@@ -299,11 +342,14 @@ class Engine:
         for subject_id, verdict in marks.items():
             if subject_id not in known or verdict not in VERDICTS:
                 raise PromptRefusedError("each grade is pass or fail for a known subject")
+            answer = self.room.answers.get((current["prompt_id"], subject_id))
+            if answer is not None and answer["state"] in ("empty", "failed"):
+                raise PromptRefusedError("a card with no answer cannot be graded")
             mark = {"verdict": verdict}
             reason = reasons.get(subject_id, "").strip()
             if len(reason) > MAX_REASON:
                 raise PromptRefusedError(f"a reason is at most {MAX_REASON} characters")
-            if reason and verdict == "fail":
+            if reason:
                 mark["reason"] = reason
             graded[subject_id] = mark
         if not graded:
@@ -324,6 +370,10 @@ class Engine:
                     {**{k: answer[k] for k in ("prompt_id", "subject_id")}, "state": "queued"},
                 )
                 self._spawn(self._answer(prompt, subject))
+        for answer in list(self.room.answers.values()):
+            prompt = prompts.get(answer["prompt_id"])
+            if prompt and answer["state"] == "done" and "jev" not in answer:
+                self._spawn(self._check_reply(prompt, answer))
         for prompt in self.room.prompts:
             if self.room.divergence.get(prompt["id"], {}).get("state") in ("pending", "scoring"):
                 self.room.divergence[prompt["id"]] = {"prompt_id": prompt["id"], "state": "pending"}

@@ -411,3 +411,42 @@ def test_the_snapshot_over_http_never_carries_a_model() -> None:
         body = tc.get("/api/room").text
         body += tc.get("/api/control/room", headers={"X-Control-Token": "tok"}).text
     assert "mistral" not in body and "model" not in body
+
+
+def test_a_model_label_passes_through_and_the_route_never_does(tmp_path: Path) -> None:
+    path = tmp_path / "subjects.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "a",
+                    "label": "A",
+                    "system": "x",
+                    "model": "room/glm-4-7-flashx",
+                    "model_label": " GLM-4.7-FlashX ",
+                },
+                {"id": "b", "label": "B", "system": "y", "model": "room/minimax-m3"},
+            ]
+        )
+    )
+    room = Room(subjects=load_subjects(path))
+    assert room.subjects[0]["model_label"] == "GLM-4.7-FlashX"
+    assert "model_label" not in room.subjects[1]
+    for view in ("attendee", "screen", "presenter"):
+        shown = json.dumps(room.snapshot(view))
+        assert "GLM-4.7-FlashX" in shown
+        assert "room/glm-4-7-flashx" not in shown and "room/minimax-m3" not in shown
+
+
+@pytest.mark.parametrize(
+    "label",
+    ["room/deepseek-flash", "evaluation/deepseek-v4-pro", "two\nlines", "<b>x</b>", "x" * 61],
+)
+def test_a_model_label_that_is_not_a_plain_name_is_refused(tmp_path: Path, label: str) -> None:
+    path = tmp_path / "subjects.json"
+    path.write_text(json.dumps([{"id": "a", "label": "A", "system": "x", "model_label": label}]))
+    with pytest.raises(SubjectsError, match="model_label"):
+        load_subjects(path)
+    path.write_text(json.dumps([{"id": "a", "label": "A", "system": "x", "model_label": 7}]))
+    with pytest.raises(SubjectsError, match="model_label"):
+        load_subjects(path)
