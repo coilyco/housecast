@@ -230,3 +230,12 @@ def test_a_card_with_no_answer_offers_no_grade() -> None:
     html = (PAGE / "index.html").read_text(encoding="utf-8")
     body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
     assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
+
+
+def test_both_verdicts_take_a_reason_and_both_are_posted() -> None:
+    """Kai wants a one-line reason on PASS as well as FAIL, and the engine must keep it."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
+    assert 'mineNow.verdict === "fail" || mineNow.verdict === "pass"' in body
+    assert "if (each.reason) reasons[id] = each.reason;" in html
+    assert 'each.verdict === "fail" && each.reason' not in html
