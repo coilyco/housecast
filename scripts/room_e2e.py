@@ -299,8 +299,12 @@ def run(
 
     # 3. The split, the tallies and the fields.
     room.control("api/control/phase", {"phase": "split"})
-    for page in pages:
-        page.locator(".tally__counts").first.wait_for(timeout=30000)
+    stuck = []
+    for index, page in enumerate(pages):
+        try:
+            page.locator(".tally__counts, .split__share").first.wait_for(timeout=30000)
+        except Exception:
+            stuck.append(f"attendee {index + 1} never saw results after the split")
     heard = room.attendee()
     round_n = heard["round"]["n"]
     got = next(r["split"] for r in heard["rounds"] if r["n"] == round_n)
@@ -313,7 +317,7 @@ def run(
     ]
     report.check(
         "3 split",
-        problems,
+        problems + stuck,
         "tallies match the clicks: "
         + ", ".join(f"{labels[s]} {want[s]['pass']}/{want[s]['fail']}" for s in subjects),
     )
@@ -332,8 +336,11 @@ def run(
         + (f" shows {shown}" if shown else " does not render any on results"),
     )
     if pages:
-        jev_line = " ".join(pages[0].locator(".measure").first.inner_text().split())
-        report.add("3 jev line", "NOTE", f"the attendee page reads: {jev_line}")
+        measure = pages[0].locator(".measure")
+        jev_line = " ".join(measure.first.inner_text().split()) if measure.count() else ""
+        report.add(
+            "3 jev line", "NOTE", f"the attendee page reads: {jev_line or 'no Jev line on results'}"
+        )
         pages[0].screenshot(path=str(out / "attendee-results.png"), full_page=True)
     screen.wait_for_timeout(2500)
     screen.screenshot(path=str(out / "screen-results.png"), full_page=True)
