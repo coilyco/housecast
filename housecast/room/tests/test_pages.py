@@ -216,3 +216,10 @@ def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
         assert html.index('href="coilyco-kit.css"') < html.index('href="room.css"'), name
     css = (PAGE / "room.css").read_text(encoding="utf-8")
     assert "var(--k-ground)" in css and "#14181f" not in css
+
+
+def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:
+    """The room waits in submissions, so the cover with the four agents shows there too."""
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert 'room.phase === "submissions" && !SHOW_PROPOSALS' in screen
+    assert '$("main").hidden = showCloser || sheets || opening;' in screen
