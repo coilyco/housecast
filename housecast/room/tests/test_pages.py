@@ -314,3 +314,14 @@ def test_every_page_wears_the_kits_orbits_background() -> None:
     for name in ("index.html", "screen.html", "present.html"):
         html = (PAGE / name).read_text(encoding="utf-8")
         assert 'k-page">' in html.split("<body", 1)[1].split(">", 1)[0] + ">", name
+
+
+def test_the_phone_role_rows_are_not_pills_so_a_wrapped_model_is_not_clipped() -> None:
+    """At 320px the model wraps under the name, and a full pill radius cut its first letters."""
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    phone = css[css.rindex("@media (max-width: 480px)") :]
+    assert (
+        ".cast--row { flex-direction: column;" in phone
+        and ".cast--row li { border-radius: var(--k-r-2);" in phone
+    )
+    assert ".cast--row .logo { grid-row: 1 / span 2; }" in phone

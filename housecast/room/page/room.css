@@ -348,3 +348,15 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
 .reasons li[data-verdict="pass"] .reasons__v { color: var(--pass); }
 .reasons li[data-verdict="fail"] .reasons__v { color: var(--fail); }
 .failures .reasons li { display: block; padding: 0; border-left: 0; background: none; }
+
+/* On a phone the model wraps under the name, so the pills stop being pills: a full curve
+   cuts the second line. The logo spans both lines and the rows keep a small radius. */
+@media (max-width: 480px) {
+  .cast--row { flex-direction: column; gap: 0.4rem; }
+  .cast--row li { border-radius: var(--k-r-2); padding: 0.4rem 0.75rem 0.4rem 0.4rem; }
+  .cast--row .who { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 0.6rem; }
+  .cast--row .logo { grid-row: 1 / span 2; }
+  .cast--row .who__model { grid-column: 2; }
+  .measure__seg { padding: 0 0.5rem; border-left: 0; }
+  .measure__tag { padding-right: 0.5rem; }
+}
