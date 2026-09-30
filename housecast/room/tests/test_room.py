@@ -27,7 +27,9 @@ def proxy(replies: dict[str, Any], jev: Any = 2.0) -> httpx.MockTransport:
 
     def handle(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
-        assert request.headers["x-agent-session-id"] == "housecast-room"
+        session = request.headers["x-agent-session-id"]
+        # A subject call names its case and the message hash. Jev calls do not.
+        assert session.startswith("case:") if "messages" in body else session == "housecast-room"
         if request.url.path == "/v1/systemone":
             if isinstance(jev, int) and not isinstance(jev, bool) and jev >= 400:
                 return httpx.Response(jev)

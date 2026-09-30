@@ -22,7 +22,7 @@ that a switch happened and never the model. The event log and the server log car
 
 A provider may cap how many calls it takes at once. `ROOM_ROUTE_LIMITS` (`--route-limits`) is `model=count,...`,
 the most answers in flight on that route, and a route not listed has no cap. `ROOM_RETRIES` (`--retries`,
-default 1) is how many extra asks a 429 or 5xx gets, waiting 2s, 4s, ... inside the answer deadline.
+default 1) is how many extra asks a 429 or 5xx gets, waiting 2s, 4s, ... inside the answer deadline. Each subject call sends `x-agent-session-id: case:<case id>:<sha256 of the user message>`, and the prompt carries that hash as `input_sha256`, shown to a viewer only with its text. The proxy drops the OpenAI `user` field and keeps that header.
 
 ## Restart
 

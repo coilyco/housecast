@@ -7,6 +7,7 @@ silent retry.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import random
 import re
@@ -64,7 +65,7 @@ class Settings:
     model: str
     jev_model: str
     key: str | None = None
-    # Sent as `user` and as x-agent-session-id, which the proxy stamps on its spans.
+    # Sent as `user`, which the proxy drops, and as x-agent-session-id, which it keeps.
     user: str = "housecast-room"
     max_tokens: int = 4000
     temperature: float = 0.7
@@ -93,15 +94,32 @@ class Settings:
         return headers
 
 
+def user_message(cfg: Settings, prompt: str) -> str:
+    """The exact user message a subject receives: the prompt and the short-answer frame."""
+    return f"{prompt}\n\n{cfg.frame}" if cfg.frame else prompt
+
+
+def input_sha256(cfg: Settings, prompt: str) -> str:
+    return hashlib.sha256(user_message(cfg, prompt).encode()).hexdigest()
+
+
 async def complete(
     client: httpx.AsyncClient,
     cfg: Settings,
     system: str,
     prompt: str,
     model: str | None = None,
+    case_id: str | None = None,
 ) -> str:
-    """The model's reply as it came back, before any markup is stripped."""
-    user = f"{prompt}\n\n{cfg.frame}" if cfg.frame else prompt
+    """The model's reply as it came back, before any markup is stripped.
+
+    With a case id the session header becomes `case:<id>:<sha256 of the user message>`, so
+    a call in the proxy and LiteLLM logs ties back to the exact text on screen.
+    """
+    user = user_message(cfg, prompt)
+    headers = cfg.headers()
+    if case_id:
+        headers["x-agent-session-id"] = f"case:{case_id}:{input_sha256(cfg, prompt)}"
     reply = await client.post(
         f"{cfg.proxy}/v1/chat/completions",
         json={
@@ -111,7 +129,7 @@ async def complete(
             "max_tokens": cfg.max_tokens,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
         },
-        headers=cfg.headers(),
+        headers=headers,
         timeout=cfg.answer_deadline,
     )
     reply.raise_for_status()

@@ -96,6 +96,7 @@ class Engine:
             "text": text,
             "commitment": commitment,
             "source": source,
+            "input_sha256": models.input_sha256(self.cfg, text),
             "at": now(),
         }
         self.room.emit("prompt", prompt)
@@ -121,6 +122,7 @@ class Engine:
                     prompt["text"],
                     self._model_for(prompt, subject),
                     self._keep_raw(base),
+                    prompt["id"],
                 )
             except Exception as failed:  # the room shows it, and the other subjects carry on
                 self.room.emit(
@@ -163,6 +165,7 @@ class Engine:
         text: str,
         model: str | None = None,
         on_empty: Callable[[int, str], None] | None = None,
+        case_id: str | None = None,
     ) -> str:
         """One answer under the deadline. A transient proxy error is retried up to
         cfg.retries times, and an answer that strips to nothing, a subject that tried to
@@ -176,7 +179,8 @@ class Engine:
                 raise TimeoutError
             try:
                 raw = await asyncio.wait_for(
-                    models.complete(self.client, self.cfg, system, text, model), timeout=remaining
+                    models.complete(self.client, self.cfg, system, text, model, case_id),
+                    timeout=remaining,
                 )
             except (httpx.TransportError, httpx.HTTPStatusError) as err:
                 errors += 1
