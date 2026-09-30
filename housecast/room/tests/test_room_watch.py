@@ -71,6 +71,32 @@ def room(tmp_path: Path, transport: httpx.MockTransport) -> Iterator[Served]:
         served.stop()
 
 
+def jev_says(replied: dict[str, float | None], inner: httpx.MockTransport) -> httpx.MockTransport:
+    """Jev's reply check per answer text: a probability, or None for a 500."""
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if request.url.path == "/v1/systemone" and "replied" in body["questions"]:
+            p = replied[body["state"]["answer"]]
+            if p is None:
+                return httpx.Response(500)
+            return httpx.Response(200, json={"answers": {"replied": {"noul": p}}})
+        return await inner.handle_async_request(request)
+
+    return httpx.MockTransport(handle)
+
+
+def checked(base: str) -> None:
+    """Wait until every settled answer carries its Jev verdict, null included."""
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        answers = httpx.get(f"{base}/api/room", timeout=5).json()["answers"]
+        if answers and all("jev" in a for a in answers if a["state"] == "done"):
+            return
+        time.sleep(0.05)
+    raise AssertionError("Jev's checks did not land")
+
+
 def summary_lines(lines: list[str]) -> list[str]:
     return [line for line in lines if "no-answer:" in line]
 
@@ -126,17 +152,71 @@ def test_a_round_scored_without_jev_is_marked_as_a_fallback(tmp_path: Path) -> N
     assert [d["method"] for d in snap["divergence"]] == ["lexical"], "the room did not fall back"
 
 
-def report_of(rev: int, prompts: int, no_answer: int = 0) -> dict[str, Any]:
+def report_of(
+    rev: int, prompts: int, no_answer: int = 0, no_reply: int = 0, model: str | None = None
+) -> dict[str, Any]:
     return {
         "rev": rev,
         "phase": "answering",
         "round": 1,
         "prompts": prompts,
         "labels": {"s1": "Violet"},
+        "models": {"s1": model},
         "no_answer": {"s1": no_answer},
+        "no_reply": {"s1": no_reply},
         "slow": [],
         "fallbacks": [],
     }
+
+
+def test_a_reply_that_is_false_or_null_is_counted_per_subject(tmp_path: Path) -> None:
+    watcher = _load()
+    verdicts = {"re: you are one": 0.9, "re: you are two": 0.1, "re: you are four": None}
+    with room(tmp_path, jev_says(verdicts, stub(fail="you are three"))) as served:
+        submit(served.base, "who answers", "d1")
+        settled(served.base)
+        checked(served.base)
+        lines: list[str] = []
+        watcher.watch(served.base, 0, 60, 5, 1, emit=lines.append, sleep=lambda _: None)
+    (line,) = summary_lines(lines)
+    no_reply = line.split("no-reply: ")[1].split(" | ")[0]
+    # Violet replied, Teal was judged not a reply, Rose has no verdict, Amber failed.
+    assert no_reply == "Violet 0, Teal 1, Amber 0, Rose 1"
+    assert "no-answer: Violet 0, Teal 0, Amber 1, Rose 0" in line
+
+
+def test_the_header_names_each_model_and_says_again_when_one_is_swapped() -> None:
+    watcher = _load()
+    flash, glm = report_of(1, 0, model="Flash Lite"), report_of(2, 0, model="GLM")
+    assert watcher.report(1000.0, flash, None, 60)[0].endswith("models: Violet on Flash Lite")
+    assert not any("models:" in line for line in watcher.report(1015.0, flash, flash, 60))
+    assert watcher.report(1030.0, glm, flash, 60)[0].endswith("models: Violet on GLM")
+    assert watcher.report(1045.0, report_of(3, 0), None, 60)[0].endswith(
+        "models: Violet on no model_label"
+    )
+
+
+def test_a_no_reply_count_that_grew_is_marked() -> None:
+    watcher = _load()
+    lines = watcher.report(1000.0, report_of(2, 1, no_reply=3), report_of(1, 1, no_reply=1), 60)
+    assert "no-reply: Violet 3 (+2)" in lines[-1]
+
+
+def test_a_round_scored_by_stance_without_a_confidence_is_not_a_fallback() -> None:
+    watcher = _load()
+    snapshot = {
+        "rev": 5,
+        "phase": "answering",
+        "round": {"n": 1},
+        "rounds": [{"n": 1, "prompt_id": "p1"}],
+        "subjects": [{"id": "s1", "label": "Violet"}],
+        "prompts": [{"id": "p1"}],
+        "divergence": [
+            {"prompt_id": "p1", "state": "done", "method": "stance", "confidence": None},
+            {"prompt_id": "p2", "state": "done", "method": "lexical", "confidence": None},
+        ],
+    }
+    assert watcher.summarize(snapshot, 1000.0, 60)["fallbacks"] == ["prompt p2"]
 
 
 def test_a_rev_that_goes_backwards_warns_of_a_fresh_log() -> None:
@@ -197,7 +277,7 @@ def test_a_dead_room_is_reported_and_its_return_is_noticed() -> None:
     assert lines[0].endswith("poll failed (1 in a row): HTTP 502")
     assert lines[1].endswith("poll failed (2 in a row): HTTP 502")
     assert "answers again after 2 failed polls" in lines[2]
-    assert "rev 3" in lines[3]
+    assert "rev 3" in lines[3] and not any("models:" in line for line in lines)
 
 
 def test_a_sign_in_page_in_front_of_the_room_is_named() -> None:
@@ -226,3 +306,35 @@ def test_the_loop_stops_on_ctrl_c(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(watcher, "watch", interrupted)
     assert watcher.main(["--base", "https://room.example"]) == 0
+
+
+class _Context:
+    """Stands in for an SSLContext: what its trust store holds and which bundles it was given."""
+
+    def __init__(self, holds: int) -> None:
+        self.holds = holds
+        self.loaded: list[str] = []
+
+    def cert_store_stats(self) -> dict[str, int]:
+        return {"x509_ca": self.holds}
+
+    def load_verify_locations(self, cafile: str) -> None:
+        self.loaded.append(cafile)
+
+
+@pytest.mark.parametrize(
+    ("holds", "bundle_exists", "loads"),
+    [(0, True, True), (194, True, False), (0, False, False)],
+)
+def test_the_system_bundle_is_added_only_when_the_default_trust_is_empty(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, holds: int, bundle_exists: bool, loads: bool
+) -> None:
+    tool = _load()
+    bundle = tmp_path / "cert.pem"
+    if bundle_exists:
+        bundle.write_text("")
+    context = _Context(holds)
+    monkeypatch.setattr(tool.ssl, "create_default_context", lambda: context)
+    monkeypatch.setattr(tool, "CA_FALLBACK", str(bundle))
+    assert tool.tls_context() is context
+    assert context.loaded == ([str(bundle)] if loads else [])
