@@ -235,6 +235,22 @@ def test_a_card_with_no_answer_offers_no_grade() -> None:
     assert 'state === "empty" || state === "failed"' in body and "No answer to grade." in body
 
 
+def test_both_verdicts_take_a_reason_and_both_are_posted() -> None:
+    """Kai wants a one-line reason on PASS as well as FAIL, and the engine must keep it."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    body = html[html.index("function gradeControls(") : html.index("function renderClosing(")]
+    assert 'mineNow.verdict === "fail" || mineNow.verdict === "pass"' in body
+    assert "if (each.reason) reasons[id] = each.reason;" in html
+    assert 'each.verdict === "fail" && each.reason' not in html
+
+
+def test_the_reason_hint_says_others_will_see_it_after_results() -> None:
+    """Attendees read each other's reasons once results open, so the hint must not say otherwise."""
+    html = (PAGE / "index.html").read_text(encoding="utf-8")
+    assert "Others in the room will see this after results." in html
+    assert "Only the presenter reads it." not in html and "eval table at the end" not in html
+
+
 def test_jevs_box_is_one_line_with_a_meter_and_the_explanation_on_hover() -> None:
     """Kai asked for about 40 characters: the scale is a meter, the words are the title."""
     views = (PAGE / "views.js").read_text(encoding="utf-8")

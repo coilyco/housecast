@@ -131,9 +131,11 @@ function gradeControls(subject) {
   if (state === "empty" || state === "failed") return `<p class="answer__reason">No answer to grade.</p>`;
   const mineNow = grades[subject.id] ?? {};
   const pressed = (v) => (mineNow.verdict === v ? "true" : "false");
-  const reason = mineNow.verdict === "fail"
+  const ask = mineNow.verdict === "fail" ? "What broke, in one line? Optional." : "What worked, in one line? Optional.";
+  const goesTo = " Others in the room will see this after results.";
+  const reason = mineNow.verdict === "fail" || mineNow.verdict === "pass"
     ? `<div class="reason">
-        <label for="reason-${escapeHtml(subject.id)}" class="dim">What broke, in one line? Optional.<span class="hint"> It goes in the eval table at the end.</span></label>
+        <label for="reason-${escapeHtml(subject.id)}" class="dim">${ask}<span class="hint">${goesTo}</span></label>
         <textarea id="reason-${escapeHtml(subject.id)}" data-reason="${escapeHtml(subject.id)}" maxlength="${REASON_MAX}">${escapeHtml(mineNow.reason ?? "")}</textarea>
       </div>`
     : "";
@@ -266,7 +268,7 @@ async function postGrades(subjectId) {
   for (const [id, each] of Object.entries(grades)) {
     if (!each.verdict) continue;
     verdicts[id] = each.verdict;
-    if (each.verdict === "fail" && each.reason) reasons[id] = each.reason;
+    if (each.reason) reasons[id] = each.reason;
   }
   const body = { round: room.round.n, device: device(), grades: verdicts, ...(Object.keys(reasons).length ? { reasons } : {}) };
   const result = demo ? { ok: true, body: {} } : await postJson("api/grades", body);
@@ -275,7 +277,7 @@ async function postGrades(subjectId) {
     // Only cards whose verdict and reason are what was sent are saved.
     for (const [id, verdict] of Object.entries(verdicts)) {
       const now = grades[id];
-      if (now && now.verdict === verdict && (now.verdict === "fail" ? now.reason ?? "" : "") === (reasons[id] ?? "")) now.status = "saved";
+      if (now && now.verdict === verdict && (now.reason ?? "") === (reasons[id] ?? "")) now.status = "saved";
     }
   } else {
     g.status = result.body.reason ?? "That grade didn't save. Tap it again.";
