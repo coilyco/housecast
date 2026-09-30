@@ -192,3 +192,13 @@ def test_the_presenter_can_run_a_case_again_or_delete_it_and_pages_hear_a_delete
         and 'control(`cases/${selected}`, undefined, "DELETE")' in present
     )
     assert '"removed"' in room and 'method === "DELETE"' in room
+
+
+def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
+    """The keepers have to survive a wipe of the log, so the room's cases leave as a file."""
+    present = (PAGE / "present.html").read_text(encoding="utf-8")
+    assert 'id="cases-download"' in present and "function casesJson()" in present
+    start = present.index("function casesJson()")
+    body = present[start : present.index("\n}\n", start)]
+    assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
+    assert "const MAX_CASES = 100;" in present
