@@ -205,3 +205,10 @@ def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
     body = present[start : present.index("\n}\n", start)]
     assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
     assert "const MAX_CASES = 100;" in present
+
+
+def test_the_screen_opens_on_the_cover_while_proposals_are_hidden() -> None:
+    """The room waits in submissions, so the cover with the four agents shows there too."""
+    screen = (PAGE / "screen.html").read_text(encoding="utf-8")
+    assert 'room.phase === "submissions" && !SHOW_PROPOSALS' in screen
+    assert '$("main").hidden = showCloser || sheets || opening;' in screen
