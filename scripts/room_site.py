@@ -23,19 +23,20 @@ PUBLIC_ROUTES = {
 GATED_ROUTES = {"present.html": "present/index.html"}
 ROUTES = {**PUBLIC_ROUTES, **GATED_ROUTES}
 SITES = {"all": ROUTES, "public": PUBLIC_ROUTES, "gated": GATED_ROUTES}
-ASSETS = ("room.css", "room.js", "views.js")
+ASSETS = ("coilyco-kit.css", "room.css", "room.js", "views.js")
 # Subjects name their logo as `creatures/<slug>.png`, so it ships beside the pages.
 LOGOS = "creatures"
 BASE = '<base href="/">'
 
 NOT_FOUND = """<!doctype html>
-<html lang="en">
+<html lang="en" data-ground="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Not part of the room</title>
 <link rel="icon" href="data:,">
 <base href="/">
+<link rel="stylesheet" href="coilyco-kit.css">
 <link rel="stylesheet" href="room.css">
 </head>
 <body>

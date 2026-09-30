@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="en" class="attendee">
+<html lang="en" class="attendee" data-ground="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>the room</title>
 <link rel="icon" href="data:,">
+<link rel="stylesheet" href="coilyco-kit.css">
 <link rel="stylesheet" href="room.css">
 </head>
 <body class="attendee">
@@ -134,9 +135,9 @@ function gradeControls(subject) {
       </div>`
     : "";
   const status = savedText(mineNow);
-  return `<div class="verdicts" role="group" aria-label="Grade ${escapeHtml(subject.label)}">
-      <button class="verdict" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="pass" aria-pressed="${pressed("pass")}">✓ PASS</button>
-      <button class="verdict" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="fail" aria-pressed="${pressed("fail")}">✕ FAIL</button>
+  return `<div class="verdicts k-segmented k-segmented--fill" role="group" aria-label="Grade ${escapeHtml(subject.label)}">
+      <button class="verdict k-segmented__item k-segmented__item--grant" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="pass" aria-pressed="${pressed("pass")}">PASS</button>
+      <button class="verdict k-segmented__item k-segmented__item--refuse" type="button" data-subject="${escapeHtml(subject.id)}" data-verdict="fail" aria-pressed="${pressed("fail")}">FAIL</button>
     </div>${reason}
     <p class="saved" data-saved="${escapeHtml(subject.id)}" aria-live="polite"${mineNow.error ? ' data-tone="error"' : ""}>${escapeHtml(status)}</p>`;
 }

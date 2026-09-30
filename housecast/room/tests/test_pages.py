@@ -205,3 +205,13 @@ def test_the_presenter_can_download_every_case_in_the_loaders_shape() -> None:
     body = present[start : present.index("\n}\n", start)]
     assert "sortedPrompts()" in body and '{ text: p.text, commitment: p.commitment ?? "" }' in body
     assert "const MAX_CASES = 100;" in present
+
+
+def test_every_page_sits_on_the_kits_dark_ground_and_loads_it_first() -> None:
+    """The room is a composition over the coilyco kit: the ground is the kit's, and room.css only composes."""
+    for name in ("index.html", "screen.html", "present.html"):
+        html = (PAGE / name).read_text(encoding="utf-8")
+        assert 'data-ground="dark"' in html, name
+        assert html.index('href="coilyco-kit.css"') < html.index('href="room.css"'), name
+    css = (PAGE / "room.css").read_text(encoding="utf-8")
+    assert "var(--k-ground)" in css and "#14181f" not in css
