@@ -191,7 +191,7 @@ p { margin: 0; }
 /* The closing table is fitted to the window, so nothing is cut off the recording. */
 .screen #main[data-phase="closing"] { height: 100dvh; overflow: hidden; }
 /* A machine reading, boxed and dashed so it never sits among the graded bars. */
-.measure { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0.2rem 1.2rem; padding: 0.6rem 1.2rem; border: 2px solid var(--k-brand); border-radius: var(--k-r-1); background: var(--k-surface); text-align: center; }
+.measure { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; padding: 0.6rem 1.2rem; border: 2px solid var(--k-brand); border-radius: var(--k-r-1); background: var(--k-surface); text-align: center; }
 .measure__tag { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .measure__line { font-family: var(--mono); font-size: clamp(1.25rem, 3vmin, 1.9rem); font-weight: 700; color: var(--text); }
 .measure__note { flex-basis: 100%; font-size: 1rem; color: var(--dim); }
@@ -328,5 +328,4 @@ html.attendee[data-hints="off"] .hint, html.screen[data-hints="off"] .hint { dis
   .measure { padding: 0.5rem 0.75rem; }
 }
 
-/* Jev's per-answer check: small, neutral, and worded as a machine check. */
-.jev-chip { margin: 0; align-self: flex-start; text-transform: none; letter-spacing: 0; }
+.measure__replied { font-family: var(--mono); font-size: clamp(1rem, 2.2vmin, 1.4rem); font-weight: 700; color: var(--text); }

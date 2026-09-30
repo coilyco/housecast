@@ -68,7 +68,7 @@ function answerCard(room, promptId, subject, now, extra = "", { about = false, c
   const intro = about && look.role ? `<p class="answer__about"><b>${escapeHtml(look.role)}</b><span>${escapeHtml(look.line)}</span></p>` : "";
   return `<article class="answer" data-state="${escapeHtml(answer.state)}" style="--c:${look.color}" aria-label="${escapeHtml(subject.label)}">
     <header class="answer__head">${who(room, subject)}<span class="answer__state"${state.tone ? ` data-tone="${state.tone}"` : ""}>${escapeHtml(state.text)}</span></header>
-    ${intro}${body}${jevChip(answer)}${extra}
+    ${intro}${body}${extra}
   </article>`;
 }
 
@@ -132,13 +132,17 @@ function jevConfidence(row) {
   return typeof c === "number" && c >= 0 && c <= 1 ? Math.round(c * 100) : null;
 }
 
-/** The per-answer "did it reply" check, worded as a machine check. "" while unknown. */
-function jevChip(answer) {
-  const j = answer?.jev;
-  if (!j || typeof j.replied !== "boolean") return "";
-  const sure = jevConfidence(j);
-  const text = j.replied ? `Jev: replied${sure === null ? "" : `, ${sure}% sure`}` : `Jev: no reply${sure === null ? "" : `, ${sure}% sure`}`;
-  return `<p class="jev-chip k-chip k-chip--neutral" aria-label="Machine check, not a grade. ${escapeHtml(text)}">${escapeHtml(text)}</p>`;
+// How many answers Jev says replied. Null until every agent has a check. The engine sends
+// a confidence per answer and none for the group, so the group's is the lowest of them.
+function jevReplied(room, promptId) {
+  const checks = room.subjects.map((s) => answerFor(room, promptId, s.id).jev);
+  if (!checks.length || checks.some((j) => typeof j?.replied !== "boolean")) return null;
+  const sure = checks.map(jevConfidence);
+  return {
+    replied: checks.filter((j) => j.replied).length,
+    of: checks.length,
+    sure: sure.every((c) => c !== null) ? Math.min(...sure) : null,
+  };
 }
 
 /** Jev's divergence for a prompt, boxed apart from the bars. "" when unasked. */
@@ -150,7 +154,9 @@ function measure(room, promptId) {
   if (d.state === "done") {
     const backup = d.method === "lexical";
     const sure = backup ? null : jevConfidence(d);
-    line = backup ? `Word overlap: ${d.score.toFixed(2)}` : `The answers differ by ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`;
+    line = backup
+      ? `How different, by word overlap: ${d.score.toFixed(2)}`
+      : `How different: ${d.score.toFixed(2)}${sure === null ? "" : `, Jev is ${sure}% sure`}`;
     note = backup
       ? "Jev did not answer, so this is a simpler count of how many words the answers do not share. 0 means the same words, 1 means none shared. It reads looser than Jev."
       : "Scale: 0 means the answers take the same stance, 1 means opposite stances.";
@@ -158,10 +164,15 @@ function measure(room, promptId) {
     line = "No measurement this round";
     note = d.reason ? escapeHtml(d.reason) : "";
   }
+  const replied = jevReplied(room, promptId);
+  const repliedLine = replied
+    ? `${replied.replied} of ${replied.of} replied${replied.sure === null ? "" : `, ${replied.sure}% sure`}`
+    : "";
   return `<aside class="measure" aria-live="polite" aria-label="Machine measurement, not a grade">
-    <p class="measure__tag">Machine measurement, not a grade</p>
+    <p class="measure__tag">Jev, machine measurement, not a grade</p>
     <p class="measure__line">${line}</p>
     ${note ? `<p class="measure__note">${note}</p>` : ""}
+    ${repliedLine ? `<p class="measure__replied">${repliedLine}</p>` : ""}
   </aside>`;
 }
 
@@ -251,5 +262,5 @@ function setHtml(el, html) {
   }
 }
 
-window.RoomViews = { jevConfidence, jevChip, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
+window.RoomViews = { jevConfidence, who, cast, answerCard, caseCard, split, measure, splitPrompt, sheet, sheetBody, sheetLine, evalTable, failures, setHtml, subjectById };
 })();
