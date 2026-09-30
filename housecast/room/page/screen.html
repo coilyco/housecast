@@ -101,6 +101,28 @@ function only(...ids) {
 /** The newest case on top, earlier ones folded below and drawn only while open. */
 const openCases = new Set();
 
+/** Fits the case context, then sizes every answer to the largest common size that fits. */
+function fitAnswers() {
+  const code = document.querySelector("#sheet-top .case__code");
+  if (code) {
+    let px = 13;
+    code.style.fontSize = `${px}px`;
+    while (px > 8 && code.scrollHeight > code.clientHeight + 1) code.style.fontSize = `${(px -= 1)}px`;
+  }
+  const els = [...document.querySelectorAll("#sheet-top .answer__text")];
+  if (!els.length) return;
+  const fits = (px) => els.every((el) => { el.style.fontSize = `${px}px`; return el.scrollHeight <= el.clientHeight + 1; });
+  let lo = 11;
+  let hi = 44;
+  if (fits(hi)) lo = hi;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+  }
+  els.forEach((el) => { el.style.fontSize = `${lo}px`; });
+}
+
 function renderSheets(now) {
   const rounds = [...room.rounds];
   const cur = room.round;
@@ -116,6 +138,7 @@ function renderSheets(now) {
       return `<details class="sheet sheet--old" data-n="${r.n}"${open ? " open" : ""}><summary>${V.sheetLine(room, r)}</summary>${open ? V.sheetBody(room, r, { now }) : ""}</details>`;
     })
     .join(""));
+  fitAnswers();
 }
 
 $("sheet-old").addEventListener("toggle", (event) => {
@@ -172,6 +195,8 @@ function render() {
     only("eval");
   }
 }
+
+window.addEventListener("resize", fitAnswers);
 
 function renderLink() {
   $("banner").hidden = link.live;
