@@ -130,6 +130,7 @@ def create_app(
     page: Path | None = PAGE,
     trusted_hops: int = 1,
     client_header: str = "",
+    attendee_prompts: bool = True,
 ) -> FastAPI:
     limit = RateLimit(rate_seconds, address_burst)
     ballots = DeviceCap(devices_per_address)
@@ -204,6 +205,8 @@ def create_app(
 
     @app.post("/api/prompts", status_code=201, response_model=None)
     async def submit(intake: Intake, request: Request) -> dict[str, Any] | JSONResponse:
+        if not attendee_prompts:  # each prompt costs a model call per subject
+            return JSONResponse({"reason": "attendee prompts are off"}, 403)
         try:
             state["engine"].validate(intake.text)
             state["engine"].check_commitment(intake.commitment)
@@ -315,6 +318,7 @@ def serve(
     devices_per_address: int,
     trusted_hops: int = 1,
     client_header: str = "",
+    attendee_prompts: bool = True,
 ) -> None:
     import uvicorn
 
@@ -328,6 +332,7 @@ def serve(
             devices_per_address,
             trusted_hops=trusted_hops,
             client_header=client_header,
+            attendee_prompts=attendee_prompts,
         ),
         host=host,
         port=port,

@@ -8,7 +8,8 @@ of `attendee` or `prepared`, in every view. Spec:
 
 `POST /api/prompts` takes an optional `commitment`. It is stripped, at most 140
 characters, and a longer one answers 422 `{reason: "the commitment is over 140
-characters"}`. Intake still needs the submissions phase and the rate limits.
+characters"}`. Intake still needs the submissions phase and the rate limits. `ROOM_ATTENDEE_PROMPTS=off`
+makes it answer 403 `{reason: "attendee prompts are off"}` before anything else, default `on`.
 
 `POST /api/control/cases` takes `{text, commitment}` with `X-Control-Token`.
 It answers 201 `{id, seq}` or 422 `{reason}`, takes up to 2000 characters of text (attendee
