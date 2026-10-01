@@ -161,6 +161,10 @@ room-watch *ARGS:
 room-preflight *ARGS:
     @uv run --no-project python scripts/room_preflight.py "$@"
 
+# Replay a trajectory ledger file into a live agent-proxy intake, dry run unless --apply (writes to the target). `just ledger-replay --source LEDGER.sqlite3 --url http://HOST:8080`.
+ledger-replay *ARGS:
+    @uv run --no-project python scripts/ledger_replay.py "$@"
+
 # Run one full grading round on a throwaway room, with real attendee browsers (writes to its log). `just room-e2e --public URL --direct URL --token-file FILE --writes`.
 room-e2e *ARGS:
     @uv run --no-project --with playwright==1.57.0 python scripts/room_e2e.py "$@"
