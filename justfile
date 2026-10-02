@@ -137,6 +137,10 @@ grade-deck *ARGS:
 grade-seal *ARGS:
     @uv run --extra eval housecast grade seal "$@"
 
+# Screenshot one card of a sealed board, offline. `just grade-shot B.html --out C.png --width 390`.
+grade-shot *ARGS:
+    @uv run --with playwright==1.57.0 python scripts/shoot_card.py "$@"
+
 # Serve a built deck to a room, with anonymous voting. `just grade-present DECK`.
 grade-present *ARGS:
     @uv run --extra eval housecast grade present "$@"
