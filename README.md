@@ -2,6 +2,8 @@
 
 Human-graded behavior evaluations, for any agent
 
+![housecast // grade - Human-graded behavior evaluations, for any agent](assets/banner/housecast.jpg)
+
 housecast is the grading half of an evaluation: the case and dataset schema,
 the pairing rule, one-keystroke annotation, the grading page, the room-facing
 deck, and the MCP tool-description loop. It knows nothing about who the subject
