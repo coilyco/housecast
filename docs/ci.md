@@ -25,3 +25,11 @@ A tag can point at any commit and ci.yml gates only main and pull requests, so
 publish.yml runs `just check` again. The tag reaches `just release-check` through
 `RELEASE_TAG` rather than the run line, so shell metacharacters stay data. The
 rest of the release train is [`publishing.md`](publishing.md).
+
+## The hosted twin
+
+`.github/workflows/ci.yml` runs the same gate on a GitHub-hosted `ubuntu-24.04`
+runner with no container. agentic-os's `actions/setup-ci` installs just, uv and
+pre-commit, and `just check` runs unchanged. It skips `just pre-commit` until the
+hook pin moves off Forgejo, so it is the offline gate only. The Forgejo workflow
+keeps running until this repo flips.
