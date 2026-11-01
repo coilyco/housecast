@@ -1,35 +1,29 @@
 # CI
 
-How `.forgejo/workflows/ci.yml` gates main and pull requests.
+How `.github/workflows/ci.yml` gates main and pull requests.
 
-## The image
+## The gate
 
-Every step runs a justfile recipe in the moving `:release` aos dev-base image,
-which already ships uv, Python 3.12 and 3.13, just, pre-commit and trufflehog, so
-the job needs no setup actions and a local `just` run checks the same thing.
+The job runs on a GitHub-hosted `ubuntu-24.04` runner with no container.
+agentic-os's `actions/setup-ci` installs just, uv and pre-commit, and
+`just check` runs unchanged, so a local `just check` tests the same thing. The
+workflow does not run `just pre-commit`, so it is the offline gate only.
 
-## The caches
+## The cache
 
-uv resolves through PyPI on a cold cache, and that egress flakes on this runner.
-The job caches `~/.cache/uv` and the pre-commit cache and raises uv's 30s HTTP
-timeout, because hook environments dominate a cold `just pre-commit`.
-
-## The runner
-
-The gate needs an Actions runner labelled `docker` attached to the repository.
-Without one the workflow is still correct and starts gating once one is attached.
+uv resolves through PyPI on a cold cache. The job caches `~/.cache/uv` keyed on
+`uv.lock` and raises uv's HTTP timeout to 180s.
 
 ## Beside publishing
 
 A tag can point at any commit and ci.yml gates only main and pull requests, so
-publish.yml runs `just check` again. The tag reaches `just release-check` through
-`RELEASE_TAG` rather than the run line, so shell metacharacters stay data. The
-rest of the release train is [`publishing.md`](publishing.md).
+the publish train runs `just check` again. The tag reaches `just release-check`
+through `RELEASE_TAG` rather than the run line, so shell metacharacters stay
+data. The rest of the release train is [`publishing.md`](publishing.md).
 
-## The hosted twin
+## The retired Forgejo gate
 
-`.github/workflows/ci.yml` runs the same gate on a GitHub-hosted `ubuntu-24.04`
-runner with no container. agentic-os's `actions/setup-ci` installs just, uv and
-pre-commit, and `just check` runs unchanged. It skips `just pre-commit` until the
-hook pin moves off Forgejo, so it is the offline gate only. The Forgejo workflow
-keeps running until this repo flips.
+`.forgejo/workflows/ci.yml` ran the same gate on a `docker` runner inside the
+moving `:release` aos dev-base image. Forgejo runners and the Forgejo registry
+retired on 2026-11-01, so that workflow does not run and its image is not
+pulled. Removing the file is COI-2931 cleanup.

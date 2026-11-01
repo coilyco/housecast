@@ -6,8 +6,9 @@ How a `housecast-v*` tag becomes a release.
 
 `.forgejo/workflows/publish.yml` fires on a pushed `housecast-v*` tag. It checks
 the tag against the packaged version, runs `just check`, builds, then uploads.
-Publishing is irreversible: PyPI accepts a filename once and yanking hides
-rather than deletes, so both gates run before the build.
+PyPI accepts a filename once, so both gates run before the build. Forgejo
+runners retired on 2026-11-01 and no GitHub publish workflow exists, so a tag
+publishes nothing until the train is ported (COI-2931).
 
 ## The rehearsal
 
@@ -25,16 +26,15 @@ Tested in `housecast/tests/test_release_tag.py`.
 
 ## The tokens
 
-Trusted publishing needs GitHub, GitLab, Google, or ActiveState as the identity
-provider, and Forgejo is none of them, so the train uses API tokens. `PYPI_TOKEN`
-and `TEST_PYPI_TOKEN` are repository Actions secrets written from SSM by
-agentic-os `just sync-actions-secrets`, each reaching uv through
+The train was written when the forge was Forgejo, which is not a trusted
+publishing identity provider, so it uses API tokens. `PYPI_TOKEN` and
+`TEST_PYPI_TOKEN` are repository Actions secrets written from SSM by agentic-os
+`just sync-actions-secrets`, each reaching uv through
 `UV_PUBLISH_TOKEN` rather than argv. Both recipes pass `--check-url`, so a rerun
 after a partial upload skips files already on that index.
 
 ## What ships
 
 The wheel carries both packages, the grading page's assets, three `py.typed`
-markers, and both licence files. The
-sdist carries the allowlist in `pyproject.toml`: the package, docs, README and
-licences.
+markers, and both licence files. The sdist carries the allowlist in
+`pyproject.toml`: the package, docs, README and licences.
