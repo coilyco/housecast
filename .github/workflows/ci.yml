@@ -1,5 +1,4 @@
-# Hosted twin of .forgejo/workflows/ci.yml: the same gate on a GitHub-hosted runner.
-# Why the toolchain is an action and not an image: docs/ci.md.
+# The gate on a GitHub-hosted runner. Toolchain-as-action rationale: docs/ci.md.
 
 name: ci
 
@@ -37,5 +36,16 @@ jobs:
           restore-keys: |
             uv-${{ runner.os }}-
 
+      - name: Cache pre-commit envs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
       - name: Offline gates (just check)
         run: just check
+
+      - name: Repository validators (just pre-commit)
+        run: just pre-commit

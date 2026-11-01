@@ -4,11 +4,10 @@ How a `housecast-v*` tag becomes a release.
 
 ## The train
 
-`.forgejo/workflows/publish.yml` fires on a pushed `housecast-v*` tag. It checks
+`.github/workflows/publish.yml` fires on a pushed `housecast-v*` tag. It checks
 the tag against the packaged version, runs `just check`, builds, then uploads.
-PyPI accepts a filename once, so both gates run before the build. Forgejo
-runners retired on 2026-11-01 and no GitHub publish workflow exists, so a tag
-publishes nothing until the train is ported (COI-2931).
+PyPI accepts a filename once, so both gates run before the build. The job runs
+on a GitHub-hosted runner (COI-3104).
 
 ## The rehearsal
 
@@ -27,7 +26,8 @@ Tested in `housecast/tests/test_release_tag.py`.
 ## The tokens
 
 The train was written when the forge was Forgejo, which is not a trusted
-publishing identity provider, so it uses API tokens. `PYPI_TOKEN` and
+publishing identity provider, so it uses API tokens. Moving trusted publishing
+to GitHub is a separate change. `PYPI_TOKEN` and
 `TEST_PYPI_TOKEN` are repository Actions secrets written from SSM by agentic-os
 `just sync-actions-secrets`, each reaching uv through
 `UV_PUBLISH_TOKEN` rather than argv. Both recipes pass `--check-url`, so a rerun
