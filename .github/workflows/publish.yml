@@ -31,15 +31,17 @@ env:
 
 jobs:
   publish:
-    runs-on: docker
+    runs-on: ubuntu-latest
     timeout-minutes: 20
-    container:
-      image: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: coilyco/agentic-os/actions/setup-ci@df1aee7cf7fd1c36c1eda3523291a76b0cdbbd35
+        with:
+          tools: just uv
 
       - name: Cache uv downloads
         uses: actions/cache@v4

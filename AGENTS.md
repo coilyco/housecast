@@ -87,10 +87,9 @@ No release is on PyPI yet. Consumers depend on this repository from GitHub
 through `[tool.uv.sources]`, pinned by tag, which is the same shape the estate
 uses for `aos-eval`.
 
-**A `housecast-v*` tag is meant to publish outward.** `.forgejo/workflows/publish.yml`
+**A `housecast-v*` tag is meant to publish outward.** `.github/workflows/publish.yml`
 builds and uploads a pushed tag to PyPI, where a version is accepted once and
-cannot be replaced. Forgejo runners retired on 2026-11-01, so that workflow does
-not run now and no GitHub publish workflow exists yet (COI-2931). Bump
+cannot be replaced. Bump
 `housecast/__init__.py` first, since the train refuses a tag that disagrees
 with it. See [`docs/publishing.md`](docs/publishing.md).
 
