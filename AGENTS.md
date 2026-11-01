@@ -80,17 +80,18 @@ There is no Makefile. Each recipe runs its command directly through uv.
 ## Release
 
 This file's frontmatter declares `workflow: pull-request-and-merge`, the one
-lane the fleet runs. Canonical history lives on Forgejo, and the GitHub mirror
-is separate setup on a separate gate.
+lane the fleet runs. Canonical history lives on GitHub, at
+`https://github.com/coilyco/housecast`.
 
-No release is on PyPI yet. Consumers depend on this repository from Forgejo
+No release is on PyPI yet. Consumers depend on this repository from GitHub
 through `[tool.uv.sources]`, pinned by tag, which is the same shape the estate
 uses for `aos-eval`.
 
-**Cutting a `housecast-v*` tag now publishes outward.** It used to publish
-nothing, and `.forgejo/workflows/publish.yml` changed that: a pushed tag builds
-and uploads to PyPI, where a version is accepted once and cannot be replaced.
-Bump `housecast/__init__.py` first, since the train refuses a tag that disagrees
+**A `housecast-v*` tag is meant to publish outward.** `.forgejo/workflows/publish.yml`
+builds and uploads a pushed tag to PyPI, where a version is accepted once and
+cannot be replaced. Forgejo runners retired on 2026-11-01, so that workflow does
+not run now and no GitHub publish workflow exists yet (COI-2931). Bump
+`housecast/__init__.py` first, since the train refuses a tag that disagrees
 with it. See [`docs/publishing.md`](docs/publishing.md).
 
 **Pin `housecast-v0.1.4` or later.** The four tags below it were cut during the
