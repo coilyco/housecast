@@ -1,7 +1,7 @@
 repos:
   # BEGIN managed by agentic-os/scripts/apply-agentic-os-hooks.py
   - repo: https://github.com/coilyco/agentic-os
-    rev: aos-precommit-v0.124.0
+    rev: aos-precommit-v0.128.0
     hooks:
       - id: catalog-trifecta
       - id: documentation-placement
@@ -39,16 +39,11 @@ repos:
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
-      # Forgejo workflows use GitHub Actions syntax; no exclude split is needed yet.
       - id: actionlint
         args:
           - -config-file
           - .github/actionlint.yaml
-        files: ^\.forgejo/workflows/.*\.(ya?ml)$
-  - repo: https://code.forgejo.org/forgejo/runner
-    rev: v12.10.1
-    hooks:
-      - id: forgejo-runner-validate
+        files: ^\.github/workflows/.*\.(ya?ml)$
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
