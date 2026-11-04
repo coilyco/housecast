@@ -21,15 +21,15 @@ test *ARGS:
 
 # Format Python sources.
 format *ARGS:
-    @uv run --all-extras ruff format housecast "$@"
+    @uv run --all-extras ruff format housecast evalkit "$@"
 
 # Check Python formatting without rewriting.
 format-check *ARGS:
-    @uv run --all-extras ruff format --check housecast "$@"
+    @uv run --all-extras ruff format --check housecast evalkit "$@"
 
 # Run the Python linter.
 lint *ARGS:
-    @uv run --all-extras ruff check housecast "$@"
+    @uv run --all-extras ruff check housecast evalkit "$@"
 
 # Run the Python type checker.
 typecheck *ARGS:
@@ -172,3 +172,88 @@ ledger-replay *ARGS:
 # Run one full grading round on a throwaway room, with real attendee browsers (writes to its log). `just room-e2e --public URL --direct URL --token-file FILE --writes`.
 room-e2e *ARGS:
     @uv run --no-project --with playwright==1.57.0 python scripts/room_e2e.py "$@"
+
+# Re-resolve uv.lock after a pyproject dependency pin moves.
+lock *ARGS:
+    @uv lock "$@"
+
+# Compose one compiled bundle per role as the eval system prompts.
+evalkit-prompts *ARGS:
+    @sh scripts/eval-prompts.sh "$@"
+
+# One live request through Agent Proxy, before a full board run.
+evalkit-smoke *ARGS:
+    @sh scripts/eval-smoke.sh "$@"
+
+# Run the board through Inspect against Agent Proxy.
+evalkit-run *ARGS:
+    @sh scripts/eval-run.sh "$@"
+
+# Open the Inspect log viewer.
+evalkit-view *ARGS:
+    @uv run --all-extras inspect view --log-dir .evalkit/logs "$@"
+
+# Project a committed run into a display payload, one way only, under this board's profile.
+evalkit-export *ARGS:
+    @mkdir -p .evalkit && uv run --all-extras python -m evalkit.profile --out .evalkit/profile.yaml
+    @uv run --all-extras housecast grade export --profile .evalkit/profile.yaml "$@"
+
+# Read an Inspect eval log and build the dataset the annotator grades.
+evalkit-filter *ARGS:
+    @uv run --all-extras python -m evalkit.filter "$@"
+
+# Ask whether response dispersion predicted the grade. `just evalkit-validity RUN/annotations.kai.yaml`.
+evalkit-validity ANNOTATIONS:
+    @uv run --all-extras python evaluations/split-candidates-2026-09-08/validity.py "{{ANNOTATIONS}}"
+
+# PyLadies Remote room M2 check. `just evalkit-room-m2 selftest`, `run <base url> <out>`, `score <out> [export]`.
+evalkit-room-m2 *ARGS:
+    @uv run --all-extras python evaluations/pyladies-room-m2-2026-09-27/room_m2.py "$@"
+
+# Why seats ask to merge, from transcripts. `just evalkit-merge-asks selftest`, `extract DIR HOURS OUT`, `classify OUT`.
+evalkit-merge-asks *ARGS:
+    @uv run --all-extras python evaluations/merge-asks-2026-10-02/mergeasks.py "$@"
+
+# Jev as a read-time filter over Basic Memory. `just evalkit-jev-filter selftest HOUSECAST`, `summary OUT_DIR`.
+evalkit-jev-filter *ARGS:
+    @uv run --all-extras python evaluations/jev-filter-2026-10-02/jevfilter.py "$@"
+
+# Cross-harness memory bench. `just evalkit-memory-bench selftest`, `run FIXTURE c0|c1 LABEL CASES`, `sentinels FIXTURE old|new`, `score FIXTURE LABEL...`.
+evalkit-memory-bench *ARGS:
+    @uv run --all-extras python evaluations/memory-bench-2026-10-02/bench.py "$@"
+
+# Per-persona backend check for the room. `just evalkit-persona-backends selftest`, `routes`, `run <bundles> <out> <config> <label> [reps]`, `jev <out> <label>`, `score <out> <label>...`.
+evalkit-persona-backends *ARGS:
+    @uv run --all-extras python evaluations/persona-backends-2026-09-29/backends.py "$@"
+
+# Pressure-variant cases for the room. `just evalkit-persona-pressure selftest`, `run <cases.json> <bundles> <out> <config> <reps> [case_id...]`, `summary <out> <config>...`, `seed <out> <config> <case_id> <rep> <out.json>`.
+evalkit-persona-pressure *ARGS:
+    @uv run --all-extras python evaluations/persona-backends-2026-09-29/pressure.py "$@"
+
+# Cluster annotation critiques into a ranked failure taxonomy.
+evalkit-taxonomy *ARGS:
+    @uv run --all-extras housecast grade taxonomy "$@"
+
+# Annotate the eval dataset by hand, one keystroke per challenge.
+evalkit-annotate *ARGS:
+    @sh scripts/eval-annotate.sh "$@"
+
+# Emit this board's profile as YAML, for a grading surface that takes --profile.
+evalkit-profile *ARGS:
+    @uv run --all-extras python -m evalkit.profile "$@"
+
+# Project the roster as entities.json, the --entities a grading surface takes.
+evalkit-entities *ARGS:
+    @sh scripts/eval-entities.sh "$@"
+
+# Grade a JSONL of {half, response} on stdin with the autonomy grader.
+evalkit-autonomy *ARGS:
+    @uv run --all-extras python -m evalkit.autonomy "$@"
+
+# Reshape challenges.yaml into eval_cases.yaml, housecast's EvalCase wire schema.
+evalkit-reshape *ARGS:
+    @uv run --all-extras python scripts/reshape_eval_cases.py "$@"
+
+# Grade one committed run in a browser, with this roster's entities and profile. `just grade-serve evaluations/pilot/RUN`.
+grade-serve *ARGS:
+    @sh scripts/eval-serve.sh "$@"

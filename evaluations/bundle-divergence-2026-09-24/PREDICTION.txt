@@ -1,0 +1,6 @@
+written 2026-09-24T03:33:32Z, before any bundle call
+EXPECTED: controls (7x8, capital) show the lowest between-bundle Jev divergence, and between minus within near 0.
+EXPECTED: deck prompts diverge more than controls on Jev, because each bundle carries a different favourite colour, voice and boundary set. deck-purple is the most likely to diverge, since each bundle states a favourite colour.
+EXPECTED: lexical divergence is high everywhere, including within-bundle, because free text rarely repeats words. So lexical signal (between minus within) is small and noisy. Jev and lexical agree weakly (rho under 0.4).
+EXPECTED: latency p50 around 5-15s on flash and slower on pro, both driven by reasoning tokens. p95 on pro may pass 30s.
+EXPECTED verdict on the premise: GO on flash if Jev between-within signal is positive on at least the deck prompts, with controls near 0.

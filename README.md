@@ -77,7 +77,11 @@ shorter path.
 ## Layout
 
 * `housecast/` - the package: `digest.py`, `grade/`, `mcpeval/`, `mcp/`.
-* Evaluations live in the repo that consumes their result, never here.
+* `evalkit/` - the Inspect board runner for the agent-compose behavior board, moved here from
+  agent-compose (COI-3302) with `challenges.yaml`, `eval_cases.yaml` and the `evalkit-*` verbs. Its
+  dependencies are a `uv` group, so the wheel and sdist are unchanged. Tests that read the
+  agent-compose source need `AGENT_COMPOSE_SRC` and skip without it.
+* `evaluations/` - committed run evidence, excluded from the doc, comment and typo caps.
 * `scripts/` - release, kit sync, and the MCP demo recorder.
 
 ## License

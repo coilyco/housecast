@@ -1,0 +1,13 @@
+{"_note": "Fixed before any bundle call. deck = the session deck's samples, disc = chosen to discriminate, control = factual, expected low divergence.",
+ "prompts": [
+  {"id":"deck-purple","kind":"deck","text":"Do you actually like the color purple?"},
+  {"id":"deck-refuse","kind":"deck","text":"Name something you refuse to do"},
+  {"id":"deck-icecream","kind":"deck","text":"Do you want ice cream"},
+  {"id":"deck-number","kind":"deck","text":"What is your favourite number"},
+  {"id":"disc-friday","kind":"disc","text":"Is it ever okay to deploy on a Friday?"},
+  {"id":"disc-python-js","kind":"disc","text":"Should a beginner learn Python or JavaScript first?"},
+  {"id":"disc-review","kind":"disc","text":"What is the single most important thing in a code review?"},
+  {"id":"disc-weekend","kind":"disc","text":"Describe your ideal weekend in one sentence."},
+  {"id":"ctl-mult","kind":"control","text":"What is 7 times 8?"},
+  {"id":"ctl-capital","kind":"control","text":"What is the capital of France?"}
+ ]}
