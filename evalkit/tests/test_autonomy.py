@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
-from housecast.grade.schema import Half, Verdict
 
 from evalkit.autonomy import Stance, classify, grade
+from housecast.grade.schema import Half, Verdict
 
 
 @pytest.mark.parametrize(

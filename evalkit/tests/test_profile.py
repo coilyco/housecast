@@ -1,8 +1,7 @@
 import pathlib
 
-from housecast.grade.io import load_profile
-
 from evalkit.profile import BOUNDARY_READINGS, PROFILE, main, to_dict
+from housecast.grade.io import load_profile
 
 
 def test_the_profile_round_trips_through_the_yaml_a_grading_surface_reads(

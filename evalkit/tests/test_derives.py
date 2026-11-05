@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from housecast.grade.schema import Challenge, Half
-
 from evalkit.task import inherit_parent_cases, load_derives
+from housecast.grade.schema import Challenge, Half
 
 
 def _case(case_id: str, entity: str, pair_id: str | None = None) -> Challenge:

@@ -14,13 +14,13 @@ import json
 import os
 from pathlib import Path
 
-from housecast.grade.schema import Challenge
 from inspect_ai import Task, task
 from inspect_ai.dataset import MemoryDataset
 from inspect_ai.solver import generate, system_message
 
 from evalkit.filter import load_challenges
 from evalkit.inspect_bridge import to_inspect
+from housecast.grade.schema import Challenge
 
 DEFAULT_CHALLENGES = Path("challenges.yaml")
 DEFAULT_PROMPTS = Path(".evalkit/prompts")

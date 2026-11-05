@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from housecast.grade.schema import Challenge
 from inspect_ai.model import ChatMessageAssistant, ChatMessageTool
 from inspect_ai.tool import ToolCall as InspectToolCall
 
 from evalkit.filter import _calls
 from evalkit.inspect_bridge import from_inspect, to_inspect
+from housecast.grade.schema import Challenge
 
 
 def challenge(**fields: Any) -> Challenge:

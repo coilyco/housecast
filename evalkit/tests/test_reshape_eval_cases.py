@@ -6,12 +6,11 @@ import importlib.util
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
-from housecast.grade.schema import EvalCase
 
 from evalkit.roleslug import canonical_case
-import pytest
-
+from housecast.grade.schema import EvalCase
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "reshape_eval_cases.py"
 CHALLENGES = Path(__file__).resolve().parents[2] / "challenges.yaml"

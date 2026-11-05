@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from housecast.grade.schema import Challenge, Half, Response
 
 from evalkit import filter as dataset_builder
-
+from housecast.grade.schema import Challenge, Half, Response
 
 
 def role_fit(against: str) -> Challenge:

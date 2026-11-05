@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from housecast.grade.schema import Challenge
 from inspect_ai.dataset import Sample as InspectSample
+
+from housecast.grade.schema import Challenge
 
 # Inspect's Sample carries only input, target, id, and metadata, so every
 # domain field rides in metadata.

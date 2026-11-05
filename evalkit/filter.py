@@ -13,13 +13,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from housecast.grade.dataset import DatasetReport, build, validate
-from housecast.grade.io import save_dataset
-from housecast.grade.schema import Challenge, Response, ToolCall
 from inspect_ai.log import read_eval_log
 
 from evalkit.profile import PROFILE
 from evalkit.roleslug import canonical_case
+from housecast.grade.dataset import DatasetReport, build, validate
+from housecast.grade.io import save_dataset
+from housecast.grade.schema import Challenge, Response, ToolCall
 
 
 def load_responses(path: Path) -> list[Response]:
