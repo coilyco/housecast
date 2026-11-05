@@ -24,6 +24,8 @@ Coarse inventory of the major capabilities housecast ships.
   subject, a divergence score, and a restart log. [`room.md`](room.md).
   Prompt commitments and presenter-prepared cases: [`room-cases.md`](room-cases.md).
   Its attendee, shared-screen, and presenter pages: [`room-display.md`](room-display.md).
+* **The evalkit board runner.** `just evalkit-run` and the verbs around it fan the agent-compose
+  behavior board out through Inspect. Dependencies sit in a group, not the package. See the README layout.
 * **The PyPI release train.** A pushed `housecast-v*` tag gates, builds and uploads. [`publishing.md`](publishing.md).
 
 ## Not shipped

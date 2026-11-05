@@ -1,0 +1,11 @@
+Written 2026-09-26T04:32:14Z by the science seat, before the room exists.
+Basis: bundle-divergence-2026-09-24 on pro, single call p50 15.07s, p95 42.59s,
+29/160 empty at a 1500 cap, 4/160 with tool-call markup.
+
+Time to all four at concurrency 1: p50 about 25s, p95 about 50s (max of 4 parallel calls).
+Time to all four at concurrency 10: p95 about 80s. 40 percent chance it exceeds 90s (P1 fails on time).
+Errors at 10: 30 percent chance of at least one, most likely a provider rate limit.
+Empty answers: under 5 percent only if the cap was raised or a short-answer frame added. Otherwise about 18 percent, and P2 fails.
+Tool-call markup: 0 if the room strips it. Otherwise about 2.5 percent.
+Divergence gap: about 1.3 levels on Jev's scale, controls about 0.3. P3 passes.
+P4 progress: passes, since pro's spread across four calls is wide.

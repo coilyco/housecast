@@ -1,0 +1,26 @@
+truncated or empty by route and bundle: {('deepseek-v4-flash', 'dev-advocate'): 12, ('deepseek-v4-flash', 'frontend-eng'): 10, ('deepseek-v4-flash', 'game-dev'): 5, ('deepseek-v4-flash', 'scientist'): 5, ('deepseek-v4-pro', 'dev-advocate'): 14, ('deepseek-v4-pro', 'frontend-eng'): 4, ('deepseek-v4-pro', 'game-dev'): 4, ('deepseek-v4-pro', 'scientist'): 9}
+by route and prompt: {('deepseek-v4-flash', 'deck-purple'): 1, ('deepseek-v4-flash', 'deck-refuse'): 2, ('deepseek-v4-flash', 'disc-friday'): 11, ('deepseek-v4-flash', 'disc-python-js'): 12, ('deepseek-v4-flash', 'disc-review'): 6, ('deepseek-v4-pro', 'deck-icecream'): 3, ('deepseek-v4-pro', 'deck-refuse'): 2, ('deepseek-v4-pro', 'disc-friday'): 10, ('deepseek-v4-pro', 'disc-python-js'): 10, ('deepseek-v4-pro', 'disc-review'): 4, ('deepseek-v4-pro', 'disc-weekend'): 2}
+
+POST-HOC sensitivity, not preregistered: quartets with no truncated or empty member
+evaluation/deepseek-v4-flash
+  deck-purple     jev between 1.59 (n=3) within 1.46 (n=3) signal +0.13
+  deck-refuse     jev between 1.50 (n=2) within 0.74 (n=2) signal +0.76
+  deck-icecream   jev between 2.58 (n=4) within 2.07 (n=4) signal +0.51
+  deck-number     jev between 2.84 (n=4) within 1.75 (n=4) signal +1.09
+  disc-friday     jev between nan (n=0) within nan (n=0) signal +nan
+  disc-python-js  jev between nan (n=0) within nan (n=0) signal +nan
+  disc-review     jev between nan (n=0) within 0.33 (n=1) signal +nan
+  disc-weekend    jev between 2.78 (n=4) within 1.31 (n=4) signal +1.48
+  ctl-mult        jev between 0.95 (n=4) within 1.21 (n=4) signal -0.26
+  ctl-capital     jev between 1.32 (n=4) within 0.71 (n=4) signal +0.61
+evaluation/deepseek-v4-pro
+  deck-purple     jev between 2.92 (n=4) within 0.67 (n=4) signal +2.25
+  deck-refuse     jev between 1.73 (n=2) within 1.49 (n=3) signal +0.24
+  deck-icecream   jev between 2.51 (n=1) within 0.75 (n=3) signal +1.76
+  deck-number     jev between 2.23 (n=4) within 1.21 (n=4) signal +1.02
+  disc-friday     jev between nan (n=0) within nan (n=0) signal +nan
+  disc-python-js  jev between nan (n=0) within nan (n=0) signal +nan
+  disc-review     jev between 2.61 (n=1) within 1.20 (n=2) signal +1.41
+  disc-weekend    jev between 2.75 (n=2) within 1.09 (n=3) signal +1.66
+  ctl-mult        jev between 0.56 (n=4) within 0.49 (n=4) signal +0.07
+  ctl-capital     jev between 0.19 (n=4) within 0.16 (n=4) signal +0.03

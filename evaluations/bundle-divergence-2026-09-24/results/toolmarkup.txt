@@ -1,0 +1,2 @@
+answers containing tool-call markup, by route and bundle: {('deepseek-v4-flash', 'dev-advocate'): 2, ('deepseek-v4-flash', 'scientist'): 4, ('deepseek-v4-pro', 'dev-advocate'): 4}
+totals per route: {'deepseek-v4-flash': 6, 'deepseek-v4-pro': 4} of {'deepseek-v4-flash': 160, 'deepseek-v4-pro': 160}

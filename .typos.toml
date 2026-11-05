@@ -23,3 +23,8 @@ extend-ignore-re = [
   "\\b[0-9a-f]*[0-9][0-9a-f]*\\b",
   "\\b[a-z]+_[0-9a-f]{6,}\\b",
 ]
+
+# evaluations/** is run evidence carried from agent-compose (COI-3302), and the two
+# challenge files are derived prompts. Job ids and hashes inside them are not typos.
+[files]
+extend-exclude = ["evaluations/**", "challenges.yaml", "eval_cases.yaml"]

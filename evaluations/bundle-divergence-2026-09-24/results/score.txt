@@ -1,0 +1,30 @@
+answer calls ok 320, errors 0
+evaluation/deepseek-v4-flash: n=160 p50=4.10s p95=8.95s max=10.40s truncated=32 empty=18
+evaluation/deepseek-v4-pro: n=160 p50=15.07s p95=42.59s max=44.64s truncated=31 empty=29
+jev: n=160 p50=0.21s p95=0.43s
+
+evaluation/deepseek-v4-flash  per prompt: jev between / within / signal | lexical between / within / signal
+  deck-purple     deck    jev 1.74 / 1.32 / +0.42 | lex 0.865 / 0.803 / +0.062
+  deck-refuse     deck    jev 1.62 / 0.69 / +0.93 | lex 0.843 / 0.761 / +0.082
+  deck-icecream   deck    jev 2.58 / 2.07 / +0.51 | lex 0.833 / 0.789 / +0.044
+  deck-number     deck    jev 2.84 / 1.75 / +1.09 | lex 0.847 / 0.787 / +0.060
+  disc-friday     disc    jev 1.65 / 1.46 / +0.19 | lex 0.750 / 0.786 / -0.036
+  disc-python-js  disc    jev 1.36 / 0.76 / +0.61 | lex 0.843 / 0.537 / +0.306
+  disc-review     disc    jev 2.07 / 1.01 / +1.06 | lex 0.895 / 0.699 / +0.196
+  disc-weekend    disc    jev 2.78 / 1.31 / +1.48 | lex 0.896 / 0.833 / +0.062
+  ctl-mult        control jev 0.95 / 1.21 / -0.26 | lex 0.844 / 0.813 / +0.031
+  ctl-capital     control jev 1.32 / 0.71 / +0.61 | lex 0.825 / 0.593 / +0.232
+  agreement: spearman(jev, lexical) over 80 quartets = 0.472
+
+evaluation/deepseek-v4-pro  per prompt: jev between / within / signal | lexical between / within / signal
+  deck-purple     deck    jev 2.92 / 0.67 / +2.25 | lex 0.822 / 0.690 / +0.132
+  deck-refuse     deck    jev 1.86 / 1.69 / +0.17 | lex 0.888 / 0.763 / +0.125
+  deck-icecream   deck    jev 2.85 / 0.98 / +1.87 | lex 0.908 / 0.736 / +0.172
+  deck-number     deck    jev 2.23 / 1.21 / +1.02 | lex 0.845 / 0.759 / +0.086
+  disc-friday     disc    jev 1.06 / 0.61 / +0.46 | lex 0.614 / 0.541 / +0.073
+  disc-python-js  disc    jev 1.87 / 1.15 / +0.73 | lex 0.765 / 0.688 / +0.077
+  disc-review     disc    jev 2.42 / 1.11 / +1.31 | lex 0.888 / 0.731 / +0.158
+  disc-weekend    disc    jev 2.63 / 1.22 / +1.42 | lex 0.894 / 0.782 / +0.111
+  ctl-mult        control jev 0.56 / 0.49 / +0.07 | lex 0.718 / 0.433 / +0.285
+  ctl-capital     control jev 0.19 / 0.16 / +0.03 | lex 0.486 / 0.486 / +0.000
+  agreement: spearman(jev, lexical) over 80 quartets = 0.688
